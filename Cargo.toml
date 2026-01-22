@@ -1,0 +1,16 @@
+[workspace]
+members = ["cli"]
+resolver = "3"
+
+[package]
+name = "confetti"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+derive_builder = "0.20.2"
+parking_lot = "0.12.5"
+thiserror = "2.0.18"
+whippyunits = "0.1.2"
+wpihal = { git = "https://github.com/guineawheek/wpihal-rs.git?branch=2026", version = "0.2026.1" }
