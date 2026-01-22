@@ -23,3 +23,6 @@ i want this library to be approachable for beginner Rust programmers, so i will 
 - [ ] implement revlib
 - [ ] implement command-based style framework
 - [ ] implement wpimath (sigh)
+- [ ] get CLI in order
+  - [ ] deploy
+  - [ ] project init
