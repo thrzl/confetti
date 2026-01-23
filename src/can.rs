@@ -61,18 +61,39 @@ pub enum CANResponse {
 }
 
 pub struct Period0Status {
+    pub timestamp: SystemTime,
+
     pub duty_cycle: f32,
     pub faults: u64,
     pub sticky_faults: u64,
     pub is_inverted: bool,
     pub idle_mode: IdleMode,
     pub is_follower: bool,
+}
+pub struct Period1Status {
+    pub timestamp: SystemTime,
+
+    pub temperature: f32,
+    pub velocity: f32,
+    pub voltage: f32,
+    pub current: f32,
+}
+pub struct Period2Status {
+    pub timestamp: SystemTime,
+
+    pub iAccum: f32,
+    pub position: f32,
+}
+pub struct Period3Status {
+    pub timestamp: SystemTime,
+
+    pub analog_voltage: f32,
+    pub analog_velocity: f32,
+    pub analog_position: f32,
+}
+pub struct Period4Status {
     pub timestamp: SystemTime,
 }
-pub struct Period1Status {}
-pub struct Period2Status {}
-pub struct Period3Status {}
-pub struct Period4Status {}
 
 pub trait CANResponseStatus {
     fn decode(raw_value: u64, timestamp: u32) -> Self;
