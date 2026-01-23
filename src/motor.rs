@@ -22,6 +22,44 @@ pub trait Motor: Send {
 /// really an `Arc<parking_lot::Mutex<Motor>>` under the hood.
 pub type MotorGuard<M> = Arc<Mutex<M>>;
 
+/// group together some motors to control them all at once. implements `Motor`
+pub struct MotorGroup {
+    motors: Vec<MotorGuard<dyn Motor>>,
+}
+
+impl MotorGroup {
+    pub fn from_motors(motors: Vec<MotorGuard<dyn Motor>>) -> MotorGuard<Self> {
+        MotorGuard::new(Mutex::new(Self { motors }))
+    }
+}
+
+impl Motor for MotorGroup {
+    fn check_timeout(&mut self) {
+        let _ = self
+            .motors
+            .iter_mut()
+            .map(|motor| motor.lock().check_timeout());
+    }
+
+    fn set_percent(&mut self, percentage: f64) {
+        let _ = self
+            .motors
+            .iter_mut()
+            .map(|motor| motor.lock().set_percent(percentage));
+    }
+
+    fn set_voltage(&mut self, volts: f64) {
+        let _ = self
+            .motors
+            .iter_mut()
+            .map(|motor| motor.lock().set_voltage(volts));
+    }
+
+    fn stop(&mut self) {
+        let _ = self.motors.iter_mut().map(|motor| motor.lock().stop());
+    }
+}
+
 /// stores motors and essentially "ticks" them every loop.
 ///
 /// ticked motors that have not received updates in too long should immediately stop.
