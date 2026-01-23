@@ -1,9 +1,7 @@
+use std::ops::Add;
 use std::time::{Duration, SystemTime};
-use std::{ops::Add, time::Instant};
 
-use std::sync::LazyLock;
 use thiserror::Error;
-use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
 
 #[derive(Error, Debug)]
