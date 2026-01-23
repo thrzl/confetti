@@ -133,6 +133,14 @@ impl Motor for SparkMAX {
     fn stop(&mut self) {
         self.set_percent(0.0)
     }
+
+    fn periodic(&mut self) {
+        let _messages = self.can.read_frames().unwrap_or_else(|_| vec![]);
+        // edit inner status with the new info...
+
+        // TODO: need to handle errors here better
+        let _ = self.can.send_heartbeat();
+    }
 }
 
 impl SparkMAX {

@@ -177,6 +177,13 @@ impl CANClient {
         )
     }
 
+    pub fn send_heartbeat(&self) -> HALResult<()> {
+        let arbitration_id = self.create_arb_id(CANCommand::Heartbeat);
+
+        hal_can::send_message(arbitration_id, &[0u8; 8], 2000)?;
+        Ok(())
+    }
+
     pub fn set_percent(&self, percent: f32) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
 
