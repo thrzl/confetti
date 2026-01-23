@@ -8,12 +8,12 @@ pub struct DifferentialDrive {
 }
 
 impl DifferentialDrive {
-    pub fn tank_drive(&self, left_side: f64, right_side: f64) {
+    pub fn tank_drive(&self, left_side: f32, right_side: f32) {
         self.left_motor.lock().set_percent(left_side);
         self.right_motor.lock().set_percent(right_side);
     }
 
-    pub fn arcade_drive(&self, forward: f64, rotation: f64) {
+    pub fn arcade_drive(&self, forward: f32, rotation: f32) {
         let forward = forward.clamp(-1.0, 1.0);
         let rotation = rotation.clamp(-1.0, 1.0);
         let left_motion = forward + rotation;

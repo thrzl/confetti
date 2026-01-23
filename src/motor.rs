@@ -1,6 +1,9 @@
 use parking_lot::Mutex;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
+use wpihal::can_api::{CANDeviceType, CANManufacturer};
+
+use crate::can::CANClient;
 
 pub trait Motor: Send {
     /// check if the watchdog timeout has been exceeded. if it has,
@@ -8,10 +11,10 @@ pub trait Motor: Send {
     fn check_timeout(&mut self);
 
     /// run a motor at a percentage of its capacity.
-    fn set_percent(&mut self, percentage: f64);
+    fn set_percent(&mut self, percentage: f32);
 
     /// run a motor at a set voltage.
-    fn set_voltage(&mut self, volts: f64);
+    fn set_voltage(&mut self, volts: f32);
 
     /// stop the motor.
     fn stop(&mut self);
@@ -43,14 +46,14 @@ impl Motor for MotorGroup {
             .map(|motor| motor.lock().check_timeout());
     }
 
-    fn set_percent(&mut self, percentage: f64) {
+    fn set_percent(&mut self, percentage: f32) {
         let _ = self
             .motors
             .iter_mut()
             .map(|motor| motor.lock().set_percent(percentage));
     }
 
-    fn set_voltage(&mut self, volts: f64) {
+    fn set_voltage(&mut self, volts: f32) {
         let _ = self
             .motors
             .iter_mut()
@@ -102,7 +105,8 @@ const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(100);
 
 pub struct SparkMAX {
     watchdog_time: Instant,
-    port: i32,
+    port: u8,
+    can: CANClient,
 }
 
 impl Motor for SparkMAX {
@@ -112,14 +116,18 @@ impl Motor for SparkMAX {
         }
     }
 
-    fn set_percent(&mut self, percentage: f64) {
+    fn set_percent(&mut self, percentage: f32) {
         let _ = percentage;
-        todo!()
+        self.can
+            .set_percent(percentage)
+            .expect("failed to set motor percent")
     }
 
-    fn set_voltage(&mut self, volts: f64) {
+    fn set_voltage(&mut self, volts: f32) {
         let _ = volts;
-        todo!()
+        self.can
+            .set_voltage(volts)
+            .expect("failed to set motor voltage")
     }
 
     fn stop(&mut self) {
@@ -128,10 +136,11 @@ impl Motor for SparkMAX {
 }
 
 impl SparkMAX {
-    pub fn new(port: i32) -> MotorGuard<Self> {
+    pub fn new(port: u8) -> MotorGuard<Self> {
         let motor = MotorGuard::new(Mutex::new(Self {
             port,
             watchdog_time: Instant::now(),
+            can: CANClient::new(port, CANDeviceType::kMotorController, CANManufacturer::kREV),
         }));
         let trait_motor: Arc<Mutex<dyn Motor + Send>> = motor.clone();
         MOTOR_REGISTRY
