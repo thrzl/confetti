@@ -105,7 +105,6 @@ const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(100);
 
 pub struct SparkMAX {
     watchdog_time: Instant,
-    port: u8,
     can: CANClient,
 }
 
@@ -146,7 +145,6 @@ impl Motor for SparkMAX {
 impl SparkMAX {
     pub fn new(port: u8) -> MotorGuard<Self> {
         let motor = MotorGuard::new(Mutex::new(Self {
-            port,
             watchdog_time: Instant::now(),
             can: CANClient::new(port, CANDeviceType::kMotorController, CANManufacturer::kREV),
         }));
