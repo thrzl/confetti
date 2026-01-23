@@ -15,6 +15,8 @@ pub trait Motor: Send {
 
     /// stop the motor.
     fn stop(&mut self);
+
+    fn periodic(&mut self) {}
 }
 
 /// carries a motor that can be obtained via `.lock()`.
@@ -74,10 +76,12 @@ impl MotorWatchdog {
     }
 
     /// check all stored motors. automatically cleans up dropped motors.
-    pub fn check_motors(&mut self) {
+    pub fn motor_periodic(&mut self) {
         self.motors.retain(|item: &Weak<Mutex<dyn Motor + Send>>| {
             if let Some(motor) = item.upgrade() {
-                motor.lock().check_timeout();
+                let mut motor = motor.lock();
+                motor.check_timeout();
+                motor.periodic();
                 true
             } else {
                 false

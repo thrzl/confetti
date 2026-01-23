@@ -30,7 +30,7 @@ pub fn run(mut robot: impl Robot) -> ! {
             RobotMode::Test => robot.test_periodic(),
             _ => robot.disabled_periodic(),
         }
-        MOTOR_REGISTRY.lock().check_motors();
+        MOTOR_REGISTRY.lock().motor_periodic();
         let elapsed = loop_time.elapsed();
         if elapsed > LOOP_PERIOD {
             println!("loop overrun") // do something better with this later
