@@ -14,6 +14,9 @@ use motor::MOTOR_REGISTRY;
 
 const LOOP_PERIOD: Duration = Duration::from_millis(20);
 
+/// begin the robot loop.
+///
+/// the loop runs every 20 ms, and handles periodic functions as well as
 pub fn run(mut robot: impl Robot) -> ! {
     initialize_hal();
 
