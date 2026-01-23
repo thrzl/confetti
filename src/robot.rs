@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use wpihal::{driver_station, initialize_common as initialize_hal};
-
 use crate::enums;
 
 pub struct RobotState {
@@ -30,12 +26,4 @@ pub trait Robot {
     fn disabled_periodic(&mut self) {}
     fn autonomous_periodic(&mut self) {}
     fn test_periodic(&mut self) {}
-}
-
-struct MyRobot {}
-
-impl Robot for MyRobot {
-    fn autonomous_periodic(&mut self) {
-        println!("started autonomous")
-    }
 }

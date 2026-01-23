@@ -3,14 +3,14 @@ use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 
 pub trait Motor: Send {
-    fn check_timeout(&mut self) {}
-    fn set(&mut self, value: f32) {}
-    fn stop(&mut self) {}
+    fn check_timeout(&mut self);
+    fn set(&mut self, value: f32);
+    fn stop(&mut self);
 }
 
-pub type MotorGuard<M: Motor> = Arc<Mutex<M>>;
+pub type MotorGuard<M> = Arc<Mutex<M>>;
 
-struct MotorWatchdog {
+pub struct MotorWatchdog {
     motors: Vec<Weak<Mutex<dyn Motor + Send>>>,
 }
 
@@ -51,7 +51,12 @@ impl Motor for SparkMAX {
     }
 
     fn set(&mut self, value: f32) {
+        let _ = value;
         todo!()
+    }
+
+    fn stop(&mut self) {
+        self.set(0.0)
     }
 }
 
