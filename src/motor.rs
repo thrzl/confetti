@@ -118,7 +118,7 @@ impl Motor for SparkMAX {
     fn set_percent(&mut self, percentage: f32) {
         let _ = percentage;
         self.can
-            .set_percent(percentage)
+            .set_percent(percentage.clamp(-1.0, 1.0))
             .expect("failed to set motor percent")
     }
 
