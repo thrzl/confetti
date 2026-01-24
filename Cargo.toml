@@ -1,6 +1,8 @@
 [workspace]
 members = ["cli"]
 resolver = "3"
+package.authors = ["te <thrizzle@proton.me>"]
+package.repository = "https://github.com/thrzl/confetti"
 
 [package]
 name = "confetti"
