@@ -50,7 +50,9 @@ fn main() -> Result<()> {
     let cli = ConfettiCli::parse();
 
     fern::Dispatch::new()
-        .level_for("ssh", log::LevelFilter::Error)
+        .level_for("ssh", log::LevelFilter::Off)
+        .level_for("tracing", log::LevelFilter::Off)
+        .level_for("cargo", log::LevelFilter::Off)
         .format(|out, message, record| {
             let category_text = match record.level() {
                 log::Level::Info => "i".blue(),
@@ -58,7 +60,11 @@ fn main() -> Result<()> {
                 _ => record.level().as_str().into(),
             }
             .bold();
-            out.finish(format_args!("{category_text} {}", message.to_string()))
+            out.finish(format_args!(
+                "{category_text} {}: {}",
+                record.target(),
+                message.to_string()
+            ))
         })
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())

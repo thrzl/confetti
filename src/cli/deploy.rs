@@ -2,8 +2,12 @@ use crate::with_spinner;
 use anyhow::{Result, anyhow};
 use log::{error, info};
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
+use std::fs;
+use std::io::Read;
+use std::process::Command;
 use std::{net::TcpStream, path::PathBuf};
 use thiserror::Error;
+use toml::Value;
 
 const TARGET_TRIPLE: &str = "arm-unknown-linux-gnueabi";
 
@@ -14,9 +18,6 @@ enum DeployError {
 
     #[error("deployment error")]
     Other(#[from] anyhow::Error),
-
-    #[error("build failed")]
-    BuildFailed,
 }
 
 fn find_roborio(team_number: u32) -> Result<String> {
@@ -51,10 +52,43 @@ fn find_roborio(team_number: u32) -> Result<String> {
 }
 
 pub fn build() -> Result<PathBuf> {
-    todo!()
+    let mut manifest = fs::File::open(std::env::current_dir()?.join("Cargo.toml").as_path())?;
+    let mut manifest_content = String::new();
+    manifest.read_to_string(&mut manifest_content)?;
+    let metadata: Value = toml::from_str(&manifest_content)?;
+    let name = metadata["package"]["name"].to_string();
+
+    let err = Command::new("cargo")
+        .arg("build")
+        .arg("--release")
+        .arg("--quiet")
+        .arg("--target")
+        .arg(TARGET_TRIPLE)
+        .stdout(std::process::Stdio::null())
+        // .stderr(std::process::Stdio::null())
+        .status()?;
+    if !err.success() {
+        return Err(anyhow!(
+            "cargo build failed with code {}",
+            err.code().unwrap()
+        ));
+    };
+    let binary_path = std::env::current_dir()?.join("target/release").join(name);
+    Ok(binary_path)
 }
 
 pub fn deploy(team_number: u32) -> Result<()> {
+    let binary_path = with_spinner(
+        "building robot code (this may take a minute)".to_string(),
+        build,
+        |binary, spinner| {
+            spinner.success(&format!("built robot code at {}", binary.to_str().unwrap()));
+        },
+        |error, spinner| {
+            spinner.clear();
+            error!("failed to build robot code: {error}")
+        },
+    )?;
     let address = with_spinner(
         "looking for roboRIO".to_string(),
         || find_roborio(team_number),
@@ -98,7 +132,7 @@ pub fn deploy(team_number: u32) -> Result<()> {
 
     // todo!();
     let scp = connection.open_scp()?;
-    scp.upload("target/", "/home/lvuser")?;
+    scp.upload(binary_path.to_str().unwrap(), "/home/lvuser")?;
     connection.close();
 
     Ok(())
