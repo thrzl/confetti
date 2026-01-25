@@ -143,15 +143,18 @@ impl Motor for SparkMAX {
 }
 
 impl SparkMAX {
-    pub fn new(port: u8) -> MotorGuard<Self> {
+    /// initialize a new REV SPARK MAX motor controller. will attempt to send a heartbeat and error if it fails.
+    pub fn new(port: u8) -> anyhow::Result<MotorGuard<Self>> {
+        let can_client = CANClient::new(port);
+        can_client.send_heartbeat()?;
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
-            can: CANClient::new(port, CANDeviceType::kMotorController, CANManufacturer::kREV),
+            can: can_client,
         }));
         let trait_motor: Arc<Mutex<dyn Motor + Send>> = motor.clone();
         MOTOR_REGISTRY
             .lock()
             .add_motor(Arc::downgrade(&trait_motor));
-        motor
+        Ok(motor)
     }
 }

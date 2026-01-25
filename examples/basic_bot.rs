@@ -11,14 +11,13 @@ impl Robot for MyRobot {
 }
 
 fn main() -> anyhow::Result<()> {
-    let left = MotorGroup::from_motors(vec![SparkMAX::new(0), SparkMAX::new(1)]);
-    let right = MotorGroup::from_motors(vec![SparkMAX::new(2), SparkMAX::new(3)]);
+    let left = MotorGroup::from_motors(vec![SparkMAX::new(0)?, SparkMAX::new(1)?]);
+    let right = MotorGroup::from_motors(vec![SparkMAX::new(2)?, SparkMAX::new(3)?]);
 
     let drivetrain = DifferentialDriveBuilder::default()
         .left_motor(left)
         .right_motor(right)
-        .build()
-        .unwrap();
+        .build()?;
 
     drivetrain.arcade_drive(0.65, 0.2);
 
