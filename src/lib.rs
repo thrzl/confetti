@@ -5,10 +5,21 @@ use std::{
 };
 use wpihal::initialize_common as initialize_hal;
 
+pub mod can;
+pub mod drive;
 pub mod enums;
 pub mod errors;
 pub mod motor;
 pub mod robot;
+pub mod prelude {
+    pub use super::{
+        drive::{DifferentialDrive, DifferentialDriveBuilder, MecanumDrive, MecanumDriveBuilder},
+        errors::HALError,
+        motor::{MotorGroup, SparkMAX},
+        robot::Robot,
+        run,
+    };
+}
 
 use motor::MOTOR_REGISTRY;
 
