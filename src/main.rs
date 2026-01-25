@@ -3,7 +3,8 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
-mod deploy;
+mod cli;
+use crate::cli::deploy;
 
 pub fn with_spinner<R>(
     message: String,
@@ -39,7 +40,7 @@ enum Commands {
 fn run(cli: ConfettiCli) -> Result<()> {
     match &cli.command {
         Some(Commands::Deploy { team }) => {
-            crate::deploy::deploy(*team).map_err(|_| anyhow!("deployment failed"))
+            deploy::deploy(*team).map_err(|_| anyhow!("deployment failed"))
         }
         None => Ok(()),
     }

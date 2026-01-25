@@ -2,11 +2,7 @@ use crate::with_spinner;
 use anyhow::{Result, anyhow};
 use log::{error, info};
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
-use std::{
-    net::{SocketAddr, TcpStream},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{net::TcpStream, path::PathBuf};
 use thiserror::Error;
 
 const TARGET_TRIPLE: &str = "arm-unknown-linux-gnueabi";
@@ -100,10 +96,9 @@ pub fn deploy(team_number: u32) -> Result<()> {
     };
     spinner.update_text("copying binaries");
 
-    todo!();
-    let mut scp = connection.open_scp()?;
+    // todo!();
+    let scp = connection.open_scp()?;
     scp.upload("target/", "/home/lvuser")?;
-    scp.close();
     connection.close();
 
     Ok(())

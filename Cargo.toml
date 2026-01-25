@@ -11,8 +11,15 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+clap = { version = "4.5.54", features = ["derive"] }
+colored = "3.1.1"
 derive_builder = "0.20.2"
+fern = "0.7.1"
+log = "0.4.29"
 parking_lot = "0.12.5"
+spinoff = "0.8.0"
+ssh-rs = { version = "0.5.0", features = ["scp"] }
 thiserror = "2.0.18"
+toml = "0.9.11"
 whippyunits = "0.1.2"
 wpihal = { git = "https://github.com/guineawheek/wpihal-rs.git?branch=2026", version = "0.2026.1" }
