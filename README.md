@@ -4,6 +4,14 @@ a framework for building FRC robots in Rust
 
 built on [guineawheek/wpihal-rs](https://github.com/guineawheek/wpihal-rs).
 
+## contributing
+
+help is more than welcome! even if you're not sure what you can contribute, please let me know or send me an email (my email is on my profile).
+
+if you're familiar with how some of the low-level stuff works, please reach out! i'm learning this as i go, so that would be extremely helpful for me
+
+even if you just have complaints about the API, i'd love to hear em. i'm far from a rust professional
+
 ## example
 ```rust
 use confetti::prelude::*;
@@ -51,11 +59,13 @@ unfortunately, my team has limited time, people, and resources, so this is large
 
 i want this library to be approachable for beginner Rust programmers, so i will try hard to make things make sense.
 
-# roadmap
-- [ ] get robot loops to work
+## roadmap
+- [x] get robot loops to work*
 - [ ] implement revlib
 - [ ] implement command-based style framework
 - [ ] implement wpimath (sigh)
 - [ ] get CLI in order
-  - [ ] deploy
+  - [x] deploy*
   - [ ] project init
+
+*untested. my team is not particularly rich in money, resources, or time, so getting a hold of a robot that i can test on is difficult, to say the least
