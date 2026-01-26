@@ -1,3 +1,4 @@
+use bitvec::{field::BitField, order::Lsb0, prelude::BitSlice, view::BitView};
 use thiserror::Error;
 use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
@@ -91,6 +92,12 @@ pub enum SparkCANFrame {
     Status2 {
         velocity: f32,
         position: f32,
+    },
+
+    Status3 {
+        analog_voltage: f32,
+        analog_velocity: f32,
+        analog_position: f32,
     },
 }
 
@@ -261,6 +268,15 @@ impl CANClient {
                     velocity: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
                     position: f32::from_le_bytes([data[4], data[5], data[6], data[7]]),
                 },
+                0x205B_8C0 => {
+                    let bits = data.view_bits::<Lsb0>();
+                    SparkCANFrame::Status3 {
+                        analog_voltage: (bits[0..10].load_le::<u16>() as f32) * 0.0048973607038123,
+                        analog_velocity: (bits[10..32].load_le::<u32>() as f32)
+                            * 0.007812026887906498,
+                        analog_position: bits[32..64].load_le::<u32>() as f32,
+                    }
+                }
                 _ => continue,
             };
             can_responses.push(frame);
