@@ -116,6 +116,21 @@ pub enum SparkCANFrame {
         duty_cycle_no_signal: bool,
         duty_cycle_reserved: i32,
     },
+
+    Status7 {
+        i_accumulation: f32,
+    },
+
+    Status8 {
+        setpoint: f32,
+        is_at_setpoint: bool,
+        selected_pid_slot: u8,
+    },
+
+    Status9 {
+        maxmotion_position_setpoint: f32,
+        maxmotion_velocity_setpoint: f32,
+    },
 }
 
 impl SparkCANFrame {
@@ -317,6 +332,22 @@ impl CANClient {
                     duty_cycle_period: bits[16..32].load_le::<u16>(),
                     duty_cycle_no_signal: bits[32],
                     duty_cycle_reserved: sign_extend(bits[33..64].load_le::<i32>(), 31),
+                },
+                0x205B_9C0 => SparkCANFrame::Status7 {
+                    i_accumulation: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+                },
+                0x205B_A00 => SparkCANFrame::Status8 {
+                    setpoint: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+                    is_at_setpoint: bits[32],
+                    selected_pid_slot: bits[33..37].load_le::<u8>(),
+                },
+                0x205B_A40 => SparkCANFrame::Status9 {
+                    maxmotion_position_setpoint: f32::from_le_bytes([
+                        data[0], data[1], data[2], data[3],
+                    ]),
+                    maxmotion_velocity_setpoint: f32::from_le_bytes([
+                        data[4], data[5], data[6], data[7],
+                    ]),
                 },
                 _ => continue,
             };
