@@ -257,6 +257,10 @@ impl CANClient {
                     limits: LimitStatuses::from_byte(data[6]),
                     is_inverted: data[6] & (1 << 4) != 0,
                 },
+                0x205B_880 => SparkCANFrame::Status2 {
+                    velocity: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+                    position: f32::from_le_bytes([data[4], data[5], data[6], data[7]]),
+                },
                 _ => continue,
             };
             can_responses.push(frame);
