@@ -1,4 +1,5 @@
 use thiserror::Error;
+use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
 
 #[derive(Error, Debug)]
@@ -17,6 +18,25 @@ pub enum ApiClass {
     Setpoint = 0,
     Control = 1,
     Status = 46,
+}
+
+#[derive(Clone, Copy)]
+struct LimitStatuses {
+    pub hard_forward_limit_reached: bool,
+    pub hard_reverse_limit_reached: bool,
+    pub soft_forward_limit_reached: bool,
+    pub soft_reverse_limit_reached: bool,
+}
+
+impl LimitStatuses {
+    pub fn from_byte(b: u8) -> Self {
+        Self {
+            hard_forward_limit_reached: b & (1 << 0) != 0,
+            hard_reverse_limit_reached: b & (1 << 1) != 0,
+            soft_forward_limit_reached: b & (1 << 2) != 0,
+            soft_reverse_limit_reached: b & (1 << 3) != 0,
+        }
+    }
 }
 
 // see https://github.com/grayson-arendt/sparkcan/blob/25167e908c9350a0047edc041e0a6420b6b77a76/include/SparkBase.hpp#L54C1-L78C3
@@ -64,12 +84,10 @@ pub enum SparkCANFrame {
         voltage: f32,
         current: f32,
         motor_temperature: u8,
-        hard_forward_limit_reached: bool,
-        hard_reverse_limit_reached: bool,
-        soft_forward_limit_reached: bool,
-        soft_reverse_limit_reached: bool,
+        limits: LimitStatuses,
         is_inverted: bool,
     },
+
     Status2 {
         velocity: f32,
         position: f32,
@@ -132,13 +150,6 @@ impl SparkCANFrame {
         data
     }
 
-    pub fn from_can_bytes(arb_id: u32, bytes: [u8; 8]) -> Self {
-        let api_class = (arb_id >> 10) & 0x3F;
-        let api_index = (arb_id >> 0) & 0x3F;
-
-        todo!()
-    }
-
     pub fn heartbeat(device_id: u32) -> u32 {
         Self::Heartbeat.arb_id(device_id)
     }
@@ -156,25 +167,20 @@ pub enum IdleMode {
 }
 
 pub struct CANClient {
-    device_id: u8,
+    device_id: u32,
     session: hal_can::StreamSession,
 }
 
 impl CANClient {
-    pub fn new(device_id: u8) -> Self {
+    pub fn new(device_id: u32) -> Self {
         Self {
             device_id,
-            session: hal_can::StreamSession::open(
-                SparkCANFrame::heartbeat(device_id as u32), // this needs to be checked
-                0u32 | 0x3F << 16 | 0x3F << 22 | 0x3F << 28,
-                8,
-            )
-            .unwrap(),
+            session: hal_can::StreamSession::open(device_id, 0x3F, 64).unwrap(),
         }
     }
 
     pub fn send_heartbeat(&self) -> HALResult<()> {
-        let arbitration_id = SparkCANFrame::heartbeat(self.device_id as u32);
+        let arbitration_id = SparkCANFrame::heartbeat(self.device_id);
 
         hal_can::send_message(arbitration_id, &[0u8; 8], 2000)?;
         Ok(())
@@ -189,7 +195,7 @@ impl CANClient {
             pid_slot: 0,
             ff_units: FeedforwardUnits::DutyCycle,
         }
-        .arb_id(self.device_id as u32);
+        .arb_id(self.device_id);
 
         let data = percent.to_le_bytes();
 
@@ -204,7 +210,7 @@ impl CANClient {
             pid_slot: 0,
             ff_units: FeedforwardUnits::Voltage,
         }
-        .arb_id(self.device_id as u32);
+        .arb_id(self.device_id);
 
         let data = voltage.to_le_bytes();
 
@@ -223,8 +229,8 @@ impl CANClient {
     }
 
     pub fn read_frames(&self) -> HALResult<Vec<SparkCANFrame>> {
-        let mut messages = [];
-        let (_, error) = self.session.read_into(&mut messages);
+        let mut messages = [CANStreamMessage::default(); 32];
+        let (_, error) = self.session.read_into(&mut messages[..32]);
 
         if let Some(error) = error {
             return Err(HALError::from(error));
@@ -235,18 +241,21 @@ impl CANClient {
         for message in messages {
             let message_id = message.messageID;
 
-            let frame = match message_id {
-                33929216 => SparkCANFrame::Status0 {
-                    applied_output: u16::from_le_bytes(message.data[0..2].try_into().unwrap())
-                        as f32,
-                    voltage: 0f32,
-                    current: 0f32,
-                    motor_temperature: 0u8,
-                    hard_forward_limit_reached: false,
-                    hard_reverse_limit_reached: false,
-                    soft_forward_limit_reached: false,
-                    soft_reverse_limit_reached: false,
-                    is_inverted: false,
+            let base_id = message_id & !0x3F;
+            let _device_id = message_id & 0x3F; // just in case i need it later
+
+            let data = message.data;
+            let frame = match base_id {
+                0x205B800 => SparkCANFrame::Status0 {
+                    applied_output: (u16::from_le_bytes([data[0], data[1]]) as f32)
+                        * 0.00003082369457075716,
+                    voltage: (u16::from_le_bytes([data[2], data[3]]) & 0x0FFF) as f32
+                        * 0.0073260073260073,
+                    current: (u16::from_le_bytes([data[3], data[4]]) & 0x0FFF) as f32
+                        * 0.0366300366300366,
+                    motor_temperature: u8::from_le_bytes([data[5]]),
+                    limits: LimitStatuses::from_byte(data[6]),
+                    is_inverted: data[6] & (1 << 4) != 0,
                 },
                 _ => continue,
             };

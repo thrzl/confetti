@@ -1,7 +1,6 @@
 use parking_lot::Mutex;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
-use wpihal::can_api::{CANDeviceType, CANManufacturer};
 
 use crate::can::CANClient;
 
@@ -144,7 +143,7 @@ impl Motor for SparkMAX {
 
 impl SparkMAX {
     /// initialize a new REV SPARK MAX motor controller. will attempt to send a heartbeat and error if it fails.
-    pub fn new(port: u8) -> anyhow::Result<MotorGuard<Self>> {
+    pub fn new(port: u32) -> anyhow::Result<MotorGuard<Self>> {
         let can_client = CANClient::new(port);
         can_client.send_heartbeat()?;
         let motor = MotorGuard::new(Mutex::new(Self {
