@@ -178,6 +178,11 @@ pub struct CANClient {
     session: hal_can::StreamSession,
 }
 
+fn sign_extend(raw_value: i32, bits: u16) -> i32 {
+    let shift = 32 - bits;
+    (raw_value << shift) >> shift
+}
+
 impl CANClient {
     pub fn new(device_id: u32) -> Self {
         Self {
@@ -255,7 +260,8 @@ impl CANClient {
             let bits = data.view_bits::<Lsb0>();
             let frame = match base_id {
                 0x205B_800 => SparkCANFrame::Status0 {
-                    applied_output: (bits[0..16].load_le::<u16>() as f32) * 0.00003082369457075716,
+                    applied_output: (sign_extend(bits[0..16].load_le::<i32>(), 16) as f32)
+                        * 0.00003082369457075716,
                     voltage: (bits[16..28].load_le::<u16>()) as f32 * 0.0073260073260073,
                     current: (bits[28..40].load_le::<u16>()) as f32 * 0.0366300366300366,
                     motor_temperature: u8::from_le_bytes([data[5]]),
@@ -268,7 +274,8 @@ impl CANClient {
                 },
                 0x205B_8C0 => SparkCANFrame::Status3 {
                     analog_voltage: (bits[0..10].load_le::<u16>() as f32) * 0.0048973607038123,
-                    analog_velocity: (bits[10..32].load_le::<u32>() as f32) * 0.007812026887906498,
+                    analog_velocity: (sign_extend(bits[10..32].load_le::<i32>(), 22) as f32)
+                        * 0.007812026887906498,
                     analog_position: bits[32..64].load_le::<u32>() as f32,
                 },
                 _ => continue,
