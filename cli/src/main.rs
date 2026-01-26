@@ -3,8 +3,7 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
-mod cli;
-use crate::cli::deploy;
+mod deploy;
 
 pub fn with_spinner<R>(
     message: String,
