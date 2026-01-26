@@ -104,6 +104,18 @@ pub enum SparkCANFrame {
         external_or_alt_encoder_velocity: f32,
         external_or_alt_encoder_position: f32,
     },
+
+    Status5 {
+        duty_cycle_encoder_velocity: f32,
+        duty_cycle_encoder_position: f32,
+    },
+
+    Status6 {
+        unadjusted_duty_cycle: f32,
+        duty_cycle_period: u16,
+        duty_cycle_no_signal: bool,
+        duty_cycle_reserved: i32,
+    },
 }
 
 impl SparkCANFrame {
@@ -290,6 +302,21 @@ impl CANClient {
                     external_or_alt_encoder_position: f32::from_le_bytes([
                         data[4], data[5], data[6], data[7],
                     ]),
+                },
+                0x205B_940 => SparkCANFrame::Status5 {
+                    duty_cycle_encoder_velocity: f32::from_le_bytes([
+                        data[0], data[1], data[2], data[3],
+                    ]),
+                    duty_cycle_encoder_position: f32::from_le_bytes([
+                        data[4], data[5], data[6], data[7],
+                    ]),
+                },
+                0x205B_980 => SparkCANFrame::Status6 {
+                    unadjusted_duty_cycle: (bits[0..16].load_le::<u16>() as f32)
+                        * 0.00001541161211566339,
+                    duty_cycle_period: bits[16..32].load_le::<u16>(),
+                    duty_cycle_no_signal: bits[32],
+                    duty_cycle_reserved: sign_extend(bits[33..64].load_le::<i32>(), 31),
                 },
                 _ => continue,
             };
