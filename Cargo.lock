@@ -303,7 +303,18 @@ name = "confetti"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "confetti-lib",
+ "clap",
+ "colored 3.1.1",
+ "derive_builder",
+ "fern",
+ "log",
+ "parking_lot",
+ "spinoff",
+ "ssh-rs",
+ "thiserror 2.0.18",
+ "toml",
+ "whippyunits",
+ "wpihal",
 ]
 
 [[package]]
@@ -319,25 +330,6 @@ dependencies = [
  "ssh-rs",
  "thiserror 2.0.18",
  "toml",
-]
-
-[[package]]
-name = "confetti-lib"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "colored 3.1.1",
- "derive_builder",
- "fern",
- "log",
- "parking_lot",
- "spinoff",
- "ssh-rs",
- "thiserror 2.0.18",
- "toml",
- "whippyunits",
- "wpihal",
 ]
 
 [[package]]

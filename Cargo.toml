@@ -2,13 +2,4 @@
 resolver = "3"
 package.authors = ["te <thrizzle@proton.me>"]
 package.repository = "https://github.com/thrzl/confetti"
-members = ["cli", "confetti-lib"]
-
-[package]
-name = "confetti"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-anyhow = "1.0.100"
-confetti = {path = "./confetti-lib", package = "confetti-lib"}
+members = ["confetti-cli", "confetti"]
