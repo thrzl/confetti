@@ -1,4 +1,4 @@
-use bitvec::{field::BitField, order::Lsb0, prelude::BitSlice, view::BitView};
+use bitvec::{field::BitField, order::Lsb0, view::BitView};
 use thiserror::Error;
 use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
@@ -252,14 +252,12 @@ impl CANClient {
             let _device_id = message_id & 0x3F; // just in case i need it later
 
             let data = message.data;
+            let bits = data.view_bits::<Lsb0>();
             let frame = match base_id {
                 0x205B_800 => SparkCANFrame::Status0 {
-                    applied_output: (u16::from_le_bytes([data[0], data[1]]) as f32)
-                        * 0.00003082369457075716,
-                    voltage: (u16::from_le_bytes([data[2], data[3]]) & 0x0FFF) as f32
-                        * 0.0073260073260073,
-                    current: (u16::from_le_bytes([data[3], data[4]]) & 0x0FFF) as f32
-                        * 0.0366300366300366,
+                    applied_output: (bits[0..16].load_le::<u16>() as f32) * 0.00003082369457075716,
+                    voltage: (bits[16..28].load_le::<u16>()) as f32 * 0.0073260073260073,
+                    current: (bits[28..40].load_le::<u16>()) as f32 * 0.0366300366300366,
                     motor_temperature: u8::from_le_bytes([data[5]]),
                     limits: LimitStatuses::from_byte(data[6]),
                     is_inverted: data[6] & (1 << 4) != 0,
@@ -268,15 +266,11 @@ impl CANClient {
                     velocity: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
                     position: f32::from_le_bytes([data[4], data[5], data[6], data[7]]),
                 },
-                0x205B_8C0 => {
-                    let bits = data.view_bits::<Lsb0>();
-                    SparkCANFrame::Status3 {
-                        analog_voltage: (bits[0..10].load_le::<u16>() as f32) * 0.0048973607038123,
-                        analog_velocity: (bits[10..32].load_le::<u32>() as f32)
-                            * 0.007812026887906498,
-                        analog_position: bits[32..64].load_le::<u32>() as f32,
-                    }
-                }
+                0x205B_8C0 => SparkCANFrame::Status3 {
+                    analog_voltage: (bits[0..10].load_le::<u16>() as f32) * 0.0048973607038123,
+                    analog_velocity: (bits[10..32].load_le::<u32>() as f32) * 0.007812026887906498,
+                    analog_position: bits[32..64].load_le::<u32>() as f32,
+                },
                 _ => continue,
             };
             can_responses.push(frame);
