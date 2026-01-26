@@ -1,8 +1,6 @@
 use parking_lot::Mutex;
-use std::intrinsics::unreachable;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
-use wpihal::can::CANStatus;
 
 use crate::can::{CANClient, SparkCANFrame};
 
@@ -159,6 +157,7 @@ impl SparkMAX {
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
             can: can_client,
+            status0: None,
         }));
         let trait_motor: Arc<Mutex<dyn Motor + Send>> = motor.clone();
         MOTOR_REGISTRY
