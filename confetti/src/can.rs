@@ -97,11 +97,11 @@ pub enum SparkCANFrame {
 impl SparkCANFrame {
     pub fn arb_id(&self, device_id: u32) -> u32 {
         let frame_arb_id = match self {
-            Self::Velocity { .. } => 0x0200_000,
-            Self::DutyCycle { .. } => 0x0200_080,
-            Self::Position { .. } => 0x0200_100,
-            Self::Voltage { .. } => 0x0200_140,
-            Self::Current { .. } => 0x0200_180,
+            Self::Velocity { .. } => 0x2050_000,
+            Self::DutyCycle { .. } => 0x2050_080,
+            Self::Position { .. } => 0x2050_100,
+            Self::Voltage { .. } => 0x2050_140,
+            Self::Current { .. } => 0x2050_180,
             Self::Heartbeat => 0xB2,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
@@ -246,7 +246,7 @@ impl CANClient {
 
             let data = message.data;
             let frame = match base_id {
-                0x205B800 => SparkCANFrame::Status0 {
+                0x205B_800 => SparkCANFrame::Status0 {
                     applied_output: (u16::from_le_bytes([data[0], data[1]]) as f32)
                         * 0.00003082369457075716,
                     voltage: (u16::from_le_bytes([data[2], data[3]]) & 0x0FFF) as f32
