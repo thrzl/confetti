@@ -99,6 +99,11 @@ pub enum SparkCANFrame {
         analog_velocity: f32,
         analog_position: f32,
     },
+
+    Status4 {
+        external_or_alt_encoder_velocity: f32,
+        external_or_alt_encoder_position: f32,
+    },
 }
 
 impl SparkCANFrame {
@@ -277,6 +282,14 @@ impl CANClient {
                     analog_velocity: (sign_extend(bits[10..32].load_le::<i32>(), 22) as f32)
                         * 0.007812026887906498,
                     analog_position: bits[32..64].load_le::<u32>() as f32,
+                },
+                0x205B_900 => SparkCANFrame::Status4 {
+                    external_or_alt_encoder_velocity: f32::from_le_bytes([
+                        data[0], data[1], data[2], data[3],
+                    ]),
+                    external_or_alt_encoder_position: f32::from_le_bytes([
+                        data[4], data[5], data[6], data[7],
+                    ]),
                 },
                 _ => continue,
             };
