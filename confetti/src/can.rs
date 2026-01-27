@@ -1,18 +1,6 @@
 use bitvec::{field::BitField, order::Lsb0, view::BitView};
-use thiserror::Error;
 use wpihal::can::CANStreamMessage;
-pub use wpihal::{can as hal_can, can_api};
-
-#[derive(Error, Debug)]
-pub enum HALError {
-    #[error("internal HAL error")]
-    Internal(#[from] wpihal::error::HALError),
-
-    #[error("error decoding CAN message")]
-    DecodeError,
-}
-
-type HALResult<T> = Result<T, HALError>;
+pub use wpihal::{can as hal_can, can_api, error::HALResult};
 
 #[repr(u32)]
 pub enum ApiClass {
@@ -447,7 +435,7 @@ impl CANClient {
         let (_, error) = self.session.read_into(&mut messages[..32]);
 
         if let Some(error) = error {
-            return Err(HALError::from(error));
+            return Err(error);
         };
 
         let mut can_responses: Vec<SparkCANFrame> = Vec::with_capacity(messages.len());
