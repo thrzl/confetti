@@ -1,4 +1,4 @@
-use bitvec::{field::BitField, order::Lsb0, view::BitView};
+use bitvec::{bitvec, field::BitField, order::Lsb0, view::BitView};
 use thiserror::Error;
 use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
@@ -184,7 +184,7 @@ impl SparkCANFrame {
         frame_arb_id | (device_id)
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
-        let (sp, ff, slot, units) = match *self {
+        let (setpoint, arb_feedforward, pid_slot, ff_units) = match *self {
             Self::Velocity {
                 setpoint,
                 arb_feedforward,
@@ -214,16 +214,25 @@ impl SparkCANFrame {
                 arb_feedforward,
                 pid_slot,
                 ff_units,
-            } => (setpoint, arb_feedforward, pid_slot & 0x03, ff_units),
+            } => (setpoint, arb_feedforward, pid_slot, ff_units),
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
         };
 
-        let mut data = [0u8; 8];
+        let mut buf = [0u8; 8]; // 8-bit buffer
 
-        data[0..4].copy_from_slice(&sp.to_le_bytes());
-        data[4..6].copy_from_slice(&ff.to_le_bytes());
-        data[6] = slot | ((units as u8) << 2);
-        data
+        // voltage setpoint
+        buf[0..4].copy_from_slice(&setpoint.to_le_bytes());
+
+        // arbitrary feedforward
+        buf[4..8].copy_from_slice(&arb_feedforward.to_le_bytes());
+
+        let bits = buf.view_bits_mut::<Lsb0>();
+        // pid slot
+        bits[48..50].copy_from_bitslice(pid_slot.to_le_bytes().view_bits());
+
+        // arbitrary feedforward units
+        bits.set(50, ff_units as u8 == 1);
+        buf
     }
 
     pub fn heartbeat(device_id: u32) -> u32 {
@@ -260,6 +269,12 @@ impl CANClient {
         }
     }
 
+    #[inline]
+    fn send_frame(&self, frame: SparkCANFrame) -> HALResult<()> {
+        hal_can::send_message(frame.arb_id(self.device_id), &frame.to_can_bytes(), 2000)?;
+        Ok(())
+    }
+
     pub fn send_heartbeat(&self) -> HALResult<()> {
         let arbitration_id = SparkCANFrame::heartbeat(self.device_id);
 
@@ -270,33 +285,36 @@ impl CANClient {
     pub fn set_percent(&self, percent: f32) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
 
-        let arbitration_id = SparkCANFrame::DutyCycle {
+        let frame = SparkCANFrame::DutyCycle {
             setpoint: percent,
             arb_feedforward: 0,
             pid_slot: 0,
             ff_units: FeedforwardUnits::DutyCycle,
-        }
-        .arb_id(self.device_id);
+        };
 
-        let data = percent.to_le_bytes();
-
-        hal_can::send_message(arbitration_id, &data, 2000)?;
-        Ok(())
+        self.send_frame(frame)
     }
 
     pub fn set_voltage(&self, voltage: f32) -> HALResult<()> {
-        let arbitration_id = SparkCANFrame::Voltage {
+        let frame = SparkCANFrame::Voltage {
             setpoint: voltage,
             arb_feedforward: 0,
             pid_slot: 0,
             ff_units: FeedforwardUnits::Voltage,
-        }
-        .arb_id(self.device_id);
+        };
 
-        let data = voltage.to_le_bytes();
+        self.send_frame(frame)
+    }
 
-        hal_can::send_message(arbitration_id, &data, 2000)?;
-        Ok(())
+    pub fn set_velocity(&self, velocity: f32) -> HALResult<()> {
+        let frame = SparkCANFrame::Velocity {
+            setpoint: velocity,
+            arb_feedforward: 0,
+            pid_slot: 0,
+            ff_units: FeedforwardUnits::Voltage,
+        };
+
+        self.send_frame(frame)
     }
 
     pub fn create_mask(&self) -> u32 {
