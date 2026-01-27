@@ -49,32 +49,32 @@ pub enum SparkCANFrame {
 
     DutyCycle {
         setpoint: f32,
-        arb_feedforward: i16,
+        arb_feedforward: f32,
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
     Velocity {
         setpoint: f32,
-        arb_feedforward: i16,
+        arb_feedforward: f32,
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
     Position {
         setpoint: f32,
-        arb_feedforward: i16,
+        arb_feedforward: f32,
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
 
     Voltage {
         setpoint: f32,
-        arb_feedforward: i16,
+        arb_feedforward: f32,
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
     Current {
         setpoint: f32,
-        arb_feedforward: i16,
+        arb_feedforward: f32,
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
@@ -214,7 +214,7 @@ impl SparkCANFrame {
                 arb_feedforward,
                 pid_slot,
                 ff_units,
-            } => (setpoint, arb_feedforward, pid_slot, ff_units),
+            } => (setpoint, (arb_feedforward), pid_slot, ff_units),
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
         };
 
@@ -224,11 +224,13 @@ impl SparkCANFrame {
         buf[0..4].copy_from_slice(&setpoint.to_le_bytes());
 
         // arbitrary feedforward
-        buf[4..8].copy_from_slice(&arb_feedforward.to_le_bytes());
+        buf[4..8].copy_from_slice(
+            &(arb_feedforward.clamp(-32768.0, 32767.0) / 0.0009765923).to_le_bytes(),
+        );
 
         let bits = buf.view_bits_mut::<Lsb0>();
         // pid slot
-        bits[48..50].copy_from_bitslice(pid_slot.to_le_bytes().view_bits());
+        bits[48..50].store_le(pid_slot);
 
         // arbitrary feedforward units
         bits.set(50, ff_units as u8 == 1);
@@ -282,14 +284,20 @@ impl CANClient {
         Ok(())
     }
 
-    pub fn set_percent(&self, percent: f32) -> HALResult<()> {
+    pub fn set_percent(
+        &self,
+        percent: f32,
+        feedforward: f32,
+        pid_slot: u8,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
 
         let frame = SparkCANFrame::DutyCycle {
             setpoint: percent,
-            arb_feedforward: 0,
-            pid_slot: 0,
-            ff_units: FeedforwardUnits::DutyCycle,
+            arb_feedforward: feedforward,
+            pid_slot: pid_slot,
+            ff_units: feedforward_units,
         };
 
         self.send_frame(frame)
@@ -298,7 +306,7 @@ impl CANClient {
     pub fn set_voltage(&self, voltage: f32) -> HALResult<()> {
         let frame = SparkCANFrame::Voltage {
             setpoint: voltage,
-            arb_feedforward: 0,
+            arb_feedforward: 0.0,
             pid_slot: 0,
             ff_units: FeedforwardUnits::Voltage,
         };
@@ -309,7 +317,7 @@ impl CANClient {
     pub fn set_velocity(&self, velocity: f32) -> HALResult<()> {
         let frame = SparkCANFrame::Velocity {
             setpoint: velocity,
-            arb_feedforward: 0,
+            arb_feedforward: 0.0,
             pid_slot: 0,
             ff_units: FeedforwardUnits::Voltage,
         };
