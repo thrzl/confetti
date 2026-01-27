@@ -150,6 +150,7 @@ pub enum SparkCANFrame {
     SetDutyCyclePosition { position: f32 },
 
     StartFollowerMode,
+    StopFollowerMode,
 
     PersistParameters, // need to include the 16-bit MAGIC_NUMBER 15011
 
@@ -183,6 +184,7 @@ impl SparkCANFrame {
             Self::PositionSetpoint { .. } => 0x2050_100,
             Self::VoltageSetpoint { .. } => 0x2050_140,
             Self::CurrentSetpoint { .. } => 0x2050_180,
+            Self::StopFollowerMode => 0x2057_C80,
             Self::ClearFaults => 0x2051_B80,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
@@ -219,7 +221,7 @@ impl SparkCANFrame {
                 bits.set(50, ff_units as u8 == 1);
                 buf
             }
-            Self::ClearFaults | Self::StartFollowerMode => [0u8; 8],
+            Self::ClearFaults | Self::StartFollowerMode | Self::StopFollowerMode => [0u8; 8],
             Self::SetIAccumulation { i_accumulation } => {
                 let mut buf = [0u8; 8];
                 buf[0..4].copy_from_slice(&i_accumulation.to_le_bytes());
@@ -413,6 +415,10 @@ impl CANClient {
 
     pub fn start_follower_mode(&self) -> HALResult<()> {
         self.send_frame(SparkCANFrame::StartFollowerMode)
+    }
+
+    pub fn stop_follower_mode(&self) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::StopFollowerMode)
     }
 
     pub fn persist_parameters(&self) -> HALResult<()> {
