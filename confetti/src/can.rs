@@ -1,4 +1,4 @@
-use bitvec::{bitvec, field::BitField, order::Lsb0, view::BitView};
+use bitvec::{field::BitField, order::Lsb0, view::BitView};
 use thiserror::Error;
 use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api};
@@ -22,24 +22,12 @@ pub enum ApiClass {
 }
 
 #[derive(Clone, Copy)]
-struct LimitStatuses {
-    pub hard_forward_limit_reached: bool,
-    pub hard_reverse_limit_reached: bool,
-    pub soft_forward_limit_reached: bool,
-    pub soft_reverse_limit_reached: bool,
+pub struct SparkCANSetpoint {
+    setpoint: f32,
+    arb_feedforward: f32,
+    pid_slot: u8,
+    ff_units: FeedforwardUnits,
 }
-
-impl LimitStatuses {
-    pub fn from_byte(b: u8) -> Self {
-        Self {
-            hard_forward_limit_reached: b & (1 << 0) != 0,
-            hard_reverse_limit_reached: b & (1 << 1) != 0,
-            soft_forward_limit_reached: b & (1 << 2) != 0,
-            soft_reverse_limit_reached: b & (1 << 3) != 0,
-        }
-    }
-}
-
 // see https://github.com/grayson-arendt/sparkcan/blob/25167e908c9350a0047edc041e0a6420b6b77a76/include/SparkBase.hpp#L54C1-L78C3
 #[derive(Clone, Copy)]
 pub enum SparkCANFrame {
@@ -47,49 +35,14 @@ pub enum SparkCANFrame {
 
     Heartbeat,
 
-    DutyCycle {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
-    Velocity {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
-    Position {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
-    MAXMotionVelocity {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
-    MAXMotionPosition {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
+    DutyCycle(SparkCANSetpoint),
+    Velocity(SparkCANSetpoint),
+    Position(SparkCANSetpoint),
+    MAXMotionVelocity(SparkCANSetpoint),
+    MAXMotionPosition(SparkCANSetpoint),
 
-    Voltage {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
-    Current {
-        setpoint: f32,
-        arb_feedforward: f32,
-        pid_slot: u8,
-        ff_units: FeedforwardUnits,
-    },
+    Voltage(SparkCANSetpoint),
+    Current(SparkCANSetpoint),
 
     // statuses
     Status0 {
@@ -97,7 +50,10 @@ pub enum SparkCANFrame {
         voltage: f32,
         current: f32,
         motor_temperature: u8,
-        limits: LimitStatuses,
+        hard_forward_limit_reached: bool,
+        hard_reverse_limit_reached: bool,
+        soft_forward_limit_reached: bool,
+        soft_reverse_limit_reached: bool,
         is_inverted: bool,
     },
 
@@ -197,36 +153,16 @@ impl SparkCANFrame {
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
         let (setpoint, arb_feedforward, pid_slot, ff_units) = match *self {
-            Self::Velocity {
-                setpoint,
-                arb_feedforward,
-                pid_slot,
-                ff_units,
-            }
-            | Self::DutyCycle {
-                setpoint,
-                arb_feedforward,
-                pid_slot,
-                ff_units,
-            }
-            | Self::Position {
-                setpoint,
-                arb_feedforward,
-                pid_slot,
-                ff_units,
-            }
-            | Self::Voltage {
-                setpoint,
-                arb_feedforward,
-                pid_slot,
-                ff_units,
-            }
-            | Self::Current {
-                setpoint,
-                arb_feedforward,
-                pid_slot,
-                ff_units,
-            } => (setpoint, (arb_feedforward), pid_slot, ff_units),
+            Self::Velocity(frame)
+            | Self::DutyCycle(frame)
+            | Self::Position(frame)
+            | Self::Voltage(frame)
+            | Self::Current(frame) => (
+                frame.setpoint,
+                frame.arb_feedforward,
+                frame.pid_slot,
+                frame.ff_units,
+            ),
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
         };
 
@@ -305,12 +241,12 @@ impl CANClient {
     ) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
 
-        let frame = SparkCANFrame::DutyCycle {
+        let frame = SparkCANFrame::DutyCycle(SparkCANSetpoint {
             setpoint: percent,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -322,12 +258,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Voltage {
+        let frame = SparkCANFrame::Voltage(SparkCANSetpoint {
             setpoint: voltage,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -339,12 +275,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Velocity {
+        let frame = SparkCANFrame::Velocity(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -356,12 +292,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Position {
+        let frame = SparkCANFrame::Position(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -373,12 +309,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionVelocity {
+        let frame = SparkCANFrame::MAXMotionVelocity(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -390,12 +326,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionPosition {
+        let frame = SparkCANFrame::MAXMotionPosition(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -407,12 +343,12 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Current {
+        let frame = SparkCANFrame::Current(SparkCANSetpoint {
             setpoint: current,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        };
+        });
 
         self.send_frame(frame)
     }
@@ -448,8 +384,11 @@ impl CANClient {
                     voltage: (bits[16..28].load_le::<u16>()) as f32 * 0.0073260073260073,
                     current: (bits[28..40].load_le::<u16>()) as f32 * 0.0366300366300366,
                     motor_temperature: u8::from_le_bytes([data[5]]),
-                    limits: LimitStatuses::from_byte(data[6]),
-                    is_inverted: data[6] & (1 << 4) != 0,
+                    hard_forward_limit_reached: bits[48],
+                    soft_forward_limit_reached: bits[49],
+                    hard_reverse_limit_reached: bits[50],
+                    soft_reverse_limit_reached: bits[51],
+                    is_inverted: bits[52],
                 },
                 0x205B_840 => SparkCANFrame::Status1 {
                     other_fault: bits[0],
