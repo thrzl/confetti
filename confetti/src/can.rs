@@ -305,10 +305,6 @@ impl CANClient {
         0u32 | 0x3F << 16 | 0x3F << 22 | 0x3F << 28
     }
 
-    pub fn create_arb_id_from_info(device_id: u32, frame: SparkCANFrame) -> u32 {
-        frame.arb_id(device_id) | device_id // this needs to be double checked
-    }
-
     pub fn read_frames(&self) -> HALResult<Vec<SparkCANFrame>> {
         let mut messages = [CANStreamMessage::default(); 32];
         let (_, error) = self.session.read_into(&mut messages[..32]);
