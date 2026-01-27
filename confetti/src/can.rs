@@ -33,14 +33,14 @@ pub struct SparkCANSetpoint {
 pub enum SparkCANFrame {
     Null,
 
-    DutyCycle(SparkCANSetpoint),
-    Velocity(SparkCANSetpoint),
-    Position(SparkCANSetpoint),
-    MAXMotionVelocity(SparkCANSetpoint),
-    MAXMotionPosition(SparkCANSetpoint),
+    DutyCycleSetpoint(SparkCANSetpoint),
+    VelocitySetpoint(SparkCANSetpoint),
+    PositionSetpoint(SparkCANSetpoint),
+    MAXMotionVelocitySetpoint(SparkCANSetpoint),
+    MAXMotionPositionSetpoint(SparkCANSetpoint),
 
-    Voltage(SparkCANSetpoint),
-    Current(SparkCANSetpoint),
+    VoltageSetpoint(SparkCANSetpoint),
+    CurrentSetpoint(SparkCANSetpoint),
 
     ClearFaults,
 
@@ -165,11 +165,11 @@ pub enum SparkCANFrame {
 impl SparkCANFrame {
     pub fn arb_id(&self, device_id: u32) -> u32 {
         let frame_arb_id = match self {
-            Self::Velocity { .. } => 0x2050_000,
-            Self::DutyCycle { .. } => 0x2050_080,
-            Self::Position { .. } => 0x2050_100,
-            Self::Voltage { .. } => 0x2050_140,
-            Self::Current { .. } => 0x2050_180,
+            Self::VelocitySetpoint { .. } => 0x2050_000,
+            Self::DutyCycleSetpoint { .. } => 0x2050_080,
+            Self::PositionSetpoint { .. } => 0x2050_100,
+            Self::VoltageSetpoint { .. } => 0x2050_140,
+            Self::CurrentSetpoint { .. } => 0x2050_180,
             Self::ClearFaults => 0x2051_B80,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
@@ -177,11 +177,11 @@ impl SparkCANFrame {
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
         match *self {
-            Self::Velocity(frame)
-            | Self::DutyCycle(frame)
-            | Self::Position(frame)
-            | Self::Voltage(frame)
-            | Self::Current(frame) => {
+            Self::VelocitySetpoint(frame)
+            | Self::DutyCycleSetpoint(frame)
+            | Self::PositionSetpoint(frame)
+            | Self::VoltageSetpoint(frame)
+            | Self::CurrentSetpoint(frame) => {
                 let (setpoint, arb_feedforward, pid_slot, ff_units) = (
                     frame.setpoint,
                     frame.arb_feedforward,
@@ -281,7 +281,7 @@ impl CANClient {
     ) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
 
-        let frame = SparkCANFrame::DutyCycle(SparkCANSetpoint {
+        let frame = SparkCANFrame::DutyCycleSetpoint(SparkCANSetpoint {
             setpoint: percent,
             arb_feedforward: feedforward,
             pid_slot,
@@ -298,7 +298,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Voltage(SparkCANSetpoint {
+        let frame = SparkCANFrame::VoltageSetpoint(SparkCANSetpoint {
             setpoint: voltage,
             arb_feedforward: feedforward,
             pid_slot,
@@ -315,7 +315,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Velocity(SparkCANSetpoint {
+        let frame = SparkCANFrame::VelocitySetpoint(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
@@ -332,7 +332,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Position(SparkCANSetpoint {
+        let frame = SparkCANFrame::PositionSetpoint(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
@@ -349,7 +349,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionVelocity(SparkCANSetpoint {
+        let frame = SparkCANFrame::MAXMotionVelocitySetpoint(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
@@ -366,7 +366,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionPosition(SparkCANSetpoint {
+        let frame = SparkCANFrame::MAXMotionPositionSetpoint(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
@@ -383,7 +383,7 @@ impl CANClient {
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::Current(SparkCANSetpoint {
+        let frame = SparkCANFrame::CurrentSetpoint(SparkCANSetpoint {
             setpoint: current,
             arb_feedforward: feedforward,
             pid_slot,
