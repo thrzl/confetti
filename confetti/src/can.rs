@@ -406,6 +406,35 @@ impl CANClient {
         self.send_frame(frame)
     }
 
+    pub fn set_i_accumulation(&self, i_accumulation: f32) -> HALResult<()> {
+        let frame = SparkCANFrame::SetIAccumulation { i_accumulation };
+        self.send_frame(frame)
+    }
+
+    pub fn set_primary_encoder_position(&self, position: f32) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::SetPrimaryEncoderPosition { position })
+    }
+
+    pub fn set_analog_position(&self, position: f32) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::SetAnalogPosition { position })
+    }
+
+    pub fn set_ext_or_alt_encoder_position(&self, position: f32) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::SetExtOrAltEncoderPosition { position })
+    }
+
+    pub fn set_duty_cycle_position(&self, position: f32) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::SetDutyCyclePosition { position })
+    }
+
+    pub fn start_follower_mode(&self) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::StartFollowerMode)
+    }
+
+    pub fn persist_parameters(&self) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::PersistParameters)
+    }
+
     pub fn clear_faults(&self) -> HALResult<()> {
         self.send_frame(SparkCANFrame::ClearFaults)
     }
