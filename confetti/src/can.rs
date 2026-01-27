@@ -44,6 +44,8 @@ pub enum SparkCANFrame {
     Voltage(SparkCANSetpoint),
     Current(SparkCANSetpoint),
 
+    ClearFaults,
+
     // statuses
     Status0 {
         applied_output: f32,
@@ -147,42 +149,45 @@ impl SparkCANFrame {
             Self::Voltage { .. } => 0x2050_140,
             Self::Current { .. } => 0x2050_180,
             Self::Heartbeat => 0xB2,
+            Self::ClearFaults => 0x2051_B80,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
         frame_arb_id | (device_id)
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
-        let (setpoint, arb_feedforward, pid_slot, ff_units) = match *self {
+        match *self {
             Self::Velocity(frame)
             | Self::DutyCycle(frame)
             | Self::Position(frame)
             | Self::Voltage(frame)
-            | Self::Current(frame) => (
-                frame.setpoint,
-                frame.arb_feedforward,
-                frame.pid_slot,
-                frame.ff_units,
-            ),
+            | Self::Current(frame) => {
+                let (setpoint, arb_feedforward, pid_slot, ff_units) = (
+                    frame.setpoint,
+                    frame.arb_feedforward,
+                    frame.pid_slot,
+                    frame.ff_units,
+                );
+                let mut buf = [0u8; 8]; // 8 byte buffer
+
+                // voltage setpoint
+                buf[0..4].copy_from_slice(&setpoint.to_le_bytes());
+
+                // arbitrary feedforward
+                buf[4..8].copy_from_slice(
+                    &(arb_feedforward.clamp(-32768.0, 32767.0) / 0.0009765923).to_le_bytes(),
+                );
+
+                let bits = buf.view_bits_mut::<Lsb0>();
+                // pid slot
+                bits[48..50].store_le(pid_slot);
+
+                // arbitrary feedforward units
+                bits.set(50, ff_units as u8 == 1);
+                buf
+            }
+            Self::ClearFaults | Self::Heartbeat => [0u8; 8],
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
-        };
-
-        let mut buf = [0u8; 8]; // 8-bit buffer
-
-        // voltage setpoint
-        buf[0..4].copy_from_slice(&setpoint.to_le_bytes());
-
-        // arbitrary feedforward
-        buf[4..8].copy_from_slice(
-            &(arb_feedforward.clamp(-32768.0, 32767.0) / 0.0009765923).to_le_bytes(),
-        );
-
-        let bits = buf.view_bits_mut::<Lsb0>();
-        // pid slot
-        bits[48..50].store_le(pid_slot);
-
-        // arbitrary feedforward units
-        bits.set(50, ff_units as u8 == 1);
-        buf
+        }
     }
 
     pub fn heartbeat(device_id: u32) -> u32 {
@@ -351,6 +356,10 @@ impl CANClient {
         });
 
         self.send_frame(frame)
+    }
+
+    pub fn clear_faults(&self) -> HALResult<()> {
+        self.send_frame(SparkCANFrame::ClearFaults)
     }
 
     pub fn create_mask(&self) -> u32 {
