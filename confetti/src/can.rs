@@ -28,6 +28,101 @@ pub struct SparkCANSetpoint {
     pid_slot: u8,
     ff_units: FeedforwardUnits,
 }
+
+#[derive(Clone, Copy)]
+pub struct Status0 {
+    pub applied_output: f32,
+    pub voltage: f32,
+    pub current: f32,
+    pub motor_temperature: u8,
+    pub hard_forward_limit_reached: bool,
+    pub hard_reverse_limit_reached: bool,
+    pub soft_forward_limit_reached: bool,
+    pub soft_reverse_limit_reached: bool,
+    pub is_inverted: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct Status1 {
+    pub other_fault: bool,
+    pub motor_type_fault: bool,
+    pub sensor_fault: bool,
+    pub can_fault: bool,
+    pub temperature_fault: bool,
+    pub drv_fault: bool,
+    pub esc_eeprom_fault: bool,
+    pub firmware_fault: bool,
+    pub reserved_actives: u8,
+    pub brownout_warning: bool,
+    pub overcurrent_warning: bool,
+    pub esc_eeprom_warning: bool,
+    pub ext_eeprom_warning: bool,
+    pub sensor_warning: bool,
+    pub stall_warning: bool,
+    pub has_reset_warning: bool,
+    pub other_warning: bool,
+    pub other_sticky_fault: bool,
+    pub motor_type_sticky_fault: bool,
+    pub sensor_sticky_fault: bool,
+    pub can_sticky_fault: bool,
+    pub temperature_sticky_fault: bool,
+    pub drv_sticky_fault: bool,
+    pub esc_eeprom_sticky_fault: bool,
+    pub firmware_sticky_fault: bool,
+    pub brownout_sticky_warning: bool,
+    pub overcurrent_sticky_warning: bool,
+    pub esc_eeprom_sticky_warning: bool,
+    pub ext_eeprom_sticky_warning: bool,
+    pub sensor_sticky_warning: bool,
+    pub stall_sticky_warning: bool,
+    pub has_reset_sticky_warning: bool,
+    pub other_sticky_warning: bool,
+    pub is_follower: bool,
+}
+#[derive(Clone, Copy)]
+pub struct Status2 {
+    pub velocity: f32,
+    pub position: f32,
+}
+#[derive(Clone, Copy)]
+pub struct Status3 {
+    pub analog_voltage: f32,
+    pub analog_velocity: f32,
+    pub analog_position: f32,
+}
+#[derive(Clone, Copy)]
+pub struct Status4 {
+    pub external_or_alt_encoder_velocity: f32,
+    pub external_or_alt_encoder_position: f32,
+}
+#[derive(Clone, Copy)]
+pub struct Status5 {
+    pub duty_cycle_encoder_velocity: f32,
+    pub duty_cycle_encoder_position: f32,
+}
+#[derive(Clone, Copy)]
+pub struct Status6 {
+    pub unadjusted_duty_cycle: f32,
+    pub duty_cycle_period: u16,
+    pub duty_cycle_no_signal: bool,
+    pub duty_cycle_reserved: i32,
+}
+#[derive(Clone, Copy)]
+pub struct Status7 {
+    pub i_accumulation: f32,
+}
+#[derive(Clone, Copy)]
+pub struct Status8 {
+    pub setpoint: f32,
+    pub is_at_setpoint: bool,
+    pub selected_pid_slot: u8,
+}
+#[derive(Clone, Copy)]
+pub struct Status9 {
+    pub maxmotion_position_setpoint: f32,
+    pub maxmotion_velocity_setpoint: f32,
+}
+
 // see https://github.com/grayson-arendt/sparkcan/blob/25167e908c9350a0047edc041e0a6420b6b77a76/include/SparkBase.hpp#L54C1-L78C3
 #[derive(Clone, Copy)]
 pub enum SparkCANFrame {
@@ -44,122 +139,40 @@ pub enum SparkCANFrame {
 
     ClearFaults,
 
-    SetIAccumulation {
-        i_accumulation: f32,
-    },
+    SetIAccumulation { i_accumulation: f32 },
 
-    SetAnalogPosition {
-        position: f32,
-    },
+    SetAnalogPosition { position: f32 },
 
-    SetPrimaryEncoderPosition {
-        position: f32,
-    },
+    SetPrimaryEncoderPosition { position: f32 },
 
-    SetExtOrAltEncoderPosition {
-        position: f32,
-    },
+    SetExtOrAltEncoderPosition { position: f32 },
 
-    SetDutyCyclePosition {
-        position: f32,
-    },
+    SetDutyCyclePosition { position: f32 },
 
     StartFollowerMode,
 
     PersistParameters, // need to include the 16-bit MAGIC_NUMBER 15011
 
     // statuses
-    Status0 {
-        applied_output: f32,
-        voltage: f32,
-        current: f32,
-        motor_temperature: u8,
-        hard_forward_limit_reached: bool,
-        hard_reverse_limit_reached: bool,
-        soft_forward_limit_reached: bool,
-        soft_reverse_limit_reached: bool,
-        is_inverted: bool,
-    },
+    Status0(Status0),
 
-    Status1 {
-        other_fault: bool,
-        motor_type_fault: bool,
-        sensor_fault: bool,
-        can_fault: bool,
-        temperature_fault: bool,
-        drv_fault: bool,
-        esc_eeprom_fault: bool,
-        firmware_fault: bool,
-        reserved_actives: u8,
-        brownout_warning: bool,
-        overcurrent_warning: bool,
-        esc_eeprom_warning: bool,
-        ext_eeprom_warning: bool,
-        sensor_warning: bool,
-        stall_warning: bool,
-        has_reset_warning: bool,
-        other_warning: bool,
-        other_sticky_fault: bool,
-        motor_type_sticky_fault: bool,
-        sensor_sticky_fault: bool,
-        can_sticky_fault: bool,
-        temperature_sticky_fault: bool,
-        drv_sticky_fault: bool,
-        esc_eeprom_sticky_fault: bool,
-        firmware_sticky_fault: bool,
-        brownout_sticky_warning: bool,
-        overcurrent_sticky_warning: bool,
-        esc_eeprom_sticky_warning: bool,
-        ext_eeprom_sticky_warning: bool,
-        sensor_sticky_warning: bool,
-        stall_sticky_warning: bool,
-        has_reset_sticky_warning: bool,
-        other_sticky_warning: bool,
-        is_follower: bool,
-    },
+    Status1(Status1),
 
-    Status2 {
-        velocity: f32,
-        position: f32,
-    },
+    Status2(Status2),
 
-    Status3 {
-        analog_voltage: f32,
-        analog_velocity: f32,
-        analog_position: f32,
-    },
+    Status3(Status3),
 
-    Status4 {
-        external_or_alt_encoder_velocity: f32,
-        external_or_alt_encoder_position: f32,
-    },
+    Status4(Status4),
 
-    Status5 {
-        duty_cycle_encoder_velocity: f32,
-        duty_cycle_encoder_position: f32,
-    },
+    Status5(Status5),
 
-    Status6 {
-        unadjusted_duty_cycle: f32,
-        duty_cycle_period: u16,
-        duty_cycle_no_signal: bool,
-        duty_cycle_reserved: i32,
-    },
+    Status6(Status6),
 
-    Status7 {
-        i_accumulation: f32,
-    },
+    Status7(Status7),
 
-    Status8 {
-        setpoint: f32,
-        is_at_setpoint: bool,
-        selected_pid_slot: u8,
-    },
+    Status8(Status8),
 
-    Status9 {
-        maxmotion_position_setpoint: f32,
-        maxmotion_velocity_setpoint: f32,
-    },
+    Status9(Status9),
 }
 
 impl SparkCANFrame {
@@ -422,7 +435,7 @@ impl CANClient {
             let data = message.data;
             let bits = data.view_bits::<Lsb0>();
             let frame = match base_id {
-                0x205B_800 => SparkCANFrame::Status0 {
+                0x205B_800 => SparkCANFrame::Status0(Status0 {
                     applied_output: (sign_extend(bits[0..16].load_le::<i32>(), 16) as f32)
                         * 0.00003082369457075716,
                     voltage: (bits[16..28].load_le::<u16>()) as f32 * 0.0073260073260073,
@@ -433,8 +446,8 @@ impl CANClient {
                     hard_reverse_limit_reached: bits[50],
                     soft_reverse_limit_reached: bits[51],
                     is_inverted: bits[52],
-                },
-                0x205B_840 => SparkCANFrame::Status1 {
+                }),
+                0x205B_840 => SparkCANFrame::Status1(Status1 {
                     other_fault: bits[0],
                     motor_type_fault: bits[1],
                     sensor_fault: bits[2],
@@ -470,56 +483,56 @@ impl CANClient {
                     has_reset_sticky_warning: bits[46],
                     other_sticky_warning: bits[47],
                     is_follower: bits[48],
-                },
-                0x205B_880 => SparkCANFrame::Status2 {
+                }),
+                0x205B_880 => SparkCANFrame::Status2(Status2 {
                     velocity: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
                     position: f32::from_le_bytes([data[4], data[5], data[6], data[7]]),
-                },
-                0x205B_8C0 => SparkCANFrame::Status3 {
+                }),
+                0x205B_8C0 => SparkCANFrame::Status3(Status3 {
                     analog_voltage: (bits[0..10].load_le::<u16>() as f32) * 0.0048973607038123,
                     analog_velocity: (sign_extend(bits[10..32].load_le::<i32>(), 22) as f32)
                         * 0.007812026887906498,
                     analog_position: bits[32..64].load_le::<u32>() as f32,
-                },
-                0x205B_900 => SparkCANFrame::Status4 {
+                }),
+                0x205B_900 => SparkCANFrame::Status4(Status4 {
                     external_or_alt_encoder_velocity: f32::from_le_bytes([
                         data[0], data[1], data[2], data[3],
                     ]),
                     external_or_alt_encoder_position: f32::from_le_bytes([
                         data[4], data[5], data[6], data[7],
                     ]),
-                },
-                0x205B_940 => SparkCANFrame::Status5 {
+                }),
+                0x205B_940 => SparkCANFrame::Status5(Status5 {
                     duty_cycle_encoder_velocity: f32::from_le_bytes([
                         data[0], data[1], data[2], data[3],
                     ]),
                     duty_cycle_encoder_position: f32::from_le_bytes([
                         data[4], data[5], data[6], data[7],
                     ]),
-                },
-                0x205B_980 => SparkCANFrame::Status6 {
+                }),
+                0x205B_980 => SparkCANFrame::Status6(Status6 {
                     unadjusted_duty_cycle: (bits[0..16].load_le::<u16>() as f32)
                         * 0.00001541161211566339,
                     duty_cycle_period: bits[16..32].load_le::<u16>(),
                     duty_cycle_no_signal: bits[32],
                     duty_cycle_reserved: sign_extend(bits[33..64].load_le::<i32>(), 31),
-                },
-                0x205B_9C0 => SparkCANFrame::Status7 {
+                }),
+                0x205B_9C0 => SparkCANFrame::Status7(Status7 {
                     i_accumulation: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
-                },
-                0x205B_A00 => SparkCANFrame::Status8 {
+                }),
+                0x205B_A00 => SparkCANFrame::Status8(Status8 {
                     setpoint: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
                     is_at_setpoint: bits[32],
                     selected_pid_slot: bits[33..37].load_le::<u8>(),
-                },
-                0x205B_A40 => SparkCANFrame::Status9 {
+                }),
+                0x205B_A40 => SparkCANFrame::Status9(Status9 {
                     maxmotion_position_setpoint: f32::from_le_bytes([
                         data[0], data[1], data[2], data[3],
                     ]),
                     maxmotion_velocity_setpoint: f32::from_le_bytes([
                         data[4], data[5], data[6], data[7],
                     ]),
-                },
+                }),
                 _ => continue,
             };
             can_responses.push(frame);

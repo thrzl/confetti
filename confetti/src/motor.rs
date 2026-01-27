@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 
-use crate::can::{CANClient, FeedforwardUnits, SparkCANFrame};
+use crate::can::{CANClient, FeedforwardUnits, SparkCANFrame, Status0};
 
 pub trait Motor: Send {
     /// check if the watchdog timeout has been exceeded. if it has,
@@ -112,7 +112,7 @@ const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(100);
 pub struct SparkMAX {
     watchdog_time: Instant,
     can: CANClient,
-    status0: Option<SparkCANFrame>,
+    status0: Option<Status0>,
     pid_slot: u8,
     feedforward: f32,
     feedforward_units: FeedforwardUnits,
@@ -159,7 +159,7 @@ impl Motor for SparkMAX {
         //
         for message in _messages {
             match message {
-                SparkCANFrame::Status0 { .. } => self.status0 = Some(message),
+                SparkCANFrame::Status0(status) => self.status0 = Some(status),
                 _ => todo!(),
             }
         }
@@ -193,60 +193,23 @@ impl SparkMAX {
     }
 
     pub fn get_applied_output(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { applied_output, .. } => Some(applied_output),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.applied_output)
     }
 
     pub fn get_voltage(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { voltage, .. } => Some(voltage),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.voltage)
     }
 
     pub fn get_current(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { current, .. } => Some(current),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.current)
     }
 
-    pub fn get_temperature(&self) -> Option<u8> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 {
-                motor_temperature, ..
-            } => Some(motor_temperature),
-            _ => unreachable!(),
-        }
+    pub fn get_motor_temperature(&self) -> Option<u8> {
+        self.status0.map(|status| status.motor_temperature)
     }
 
     pub fn get_inverted(&self) -> Option<bool> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { is_inverted, .. } => Some(is_inverted),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.is_inverted)
     }
 
     pub fn set_pid_slot(&mut self, pid_slot: u8) {
