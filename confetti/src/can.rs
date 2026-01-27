@@ -184,6 +184,7 @@ impl SparkCANFrame {
         frame_arb_id | (device_id)
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
+        let mut buf = [0u8; 8]; // 8 byte buffer
         match *self {
             Self::VelocitySetpoint(frame)
             | Self::DutyCycleSetpoint(frame)
@@ -196,7 +197,6 @@ impl SparkCANFrame {
                     frame.pid_slot,
                     frame.ff_units,
                 );
-                let mut buf = [0u8; 8]; // 8 byte buffer
 
                 // voltage setpoint
                 buf[0..4].copy_from_slice(&setpoint.to_le_bytes());
@@ -212,31 +212,25 @@ impl SparkCANFrame {
 
                 // arbitrary feedforward units
                 bits.set(50, ff_units as u8 == 1);
-                buf
             }
-            Self::ClearFaults | Self::StartFollowerMode | Self::StopFollowerMode => [0u8; 8],
+            Self::ClearFaults | Self::StartFollowerMode | Self::StopFollowerMode => (),
             Self::SetIAccumulation { i_accumulation } => {
-                let mut buf = [0u8; 8];
                 buf[0..4].copy_from_slice(&i_accumulation.to_le_bytes());
                 buf[4..8].copy_from_slice(&3u8.to_le_bytes());
-                buf
             }
             Self::SetAnalogPosition { position }
             | Self::SetDutyCyclePosition { position }
             | Self::SetPrimaryEncoderPosition { position }
             | Self::SetExtOrAltEncoderPosition { position } => {
-                let mut buf = [0u8; 8];
                 buf[0..4].copy_from_slice(&position.to_le_bytes());
                 buf[4..6].copy_from_slice(&3u8.to_le_bytes()); // magic number DATA_TYPE
-                buf
             }
             Self::PersistParameters => {
-                let mut buf = [0u8; 8];
                 buf[0..2].copy_from_slice(&15011u16.to_le_bytes());
-                buf
             }
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
-        }
+        };
+        buf
     }
 }
 
