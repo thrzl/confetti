@@ -65,6 +65,18 @@ pub enum SparkCANFrame {
         pid_slot: u8,
         ff_units: FeedforwardUnits,
     },
+    MAXMotionVelocity {
+        setpoint: f32,
+        arb_feedforward: f32,
+        pid_slot: u8,
+        ff_units: FeedforwardUnits,
+    },
+    MAXMotionPosition {
+        setpoint: f32,
+        arb_feedforward: f32,
+        pid_slot: u8,
+        ff_units: FeedforwardUnits,
+    },
 
     Voltage {
         setpoint: f32,
@@ -329,6 +341,74 @@ impl CANClient {
     ) -> HALResult<()> {
         let frame = SparkCANFrame::Velocity {
             setpoint: velocity,
+            arb_feedforward: feedforward,
+            pid_slot,
+            ff_units: feedforward_units,
+        };
+
+        self.send_frame(frame)
+    }
+
+    pub fn set_position(
+        &self,
+        position: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
+        let frame = SparkCANFrame::Position {
+            setpoint: position,
+            arb_feedforward: feedforward,
+            pid_slot,
+            ff_units: feedforward_units,
+        };
+
+        self.send_frame(frame)
+    }
+
+    pub fn set_max_motion_velocity(
+        &self,
+        velocity: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
+        let frame = SparkCANFrame::MAXMotionVelocity {
+            setpoint: velocity,
+            arb_feedforward: feedforward,
+            pid_slot,
+            ff_units: feedforward_units,
+        };
+
+        self.send_frame(frame)
+    }
+
+    pub fn set_max_motion_position(
+        &self,
+        position: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
+        let frame = SparkCANFrame::MAXMotionPosition {
+            setpoint: position,
+            arb_feedforward: feedforward,
+            pid_slot,
+            ff_units: feedforward_units,
+        };
+
+        self.send_frame(frame)
+    }
+
+    pub fn set_current(
+        &self,
+        current: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
+        let frame = SparkCANFrame::Current {
+            setpoint: current,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
