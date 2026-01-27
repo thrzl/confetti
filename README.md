@@ -1,4 +1,4 @@
-# confetti
+# confetti 🎉
 
 a framework for building FRC robots in Rust
 
