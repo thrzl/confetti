@@ -128,7 +128,7 @@ impl Motor for SparkMAX {
     fn set_percent(&mut self, percentage: f32) {
         let _ = percentage;
         self.can
-            .set_percent(
+            .duty_cycle_setpoint(
                 percentage.clamp(-1.0, 1.0),
                 self.pid_slot,
                 self.feedforward,
@@ -140,7 +140,7 @@ impl Motor for SparkMAX {
     fn set_voltage(&mut self, volts: f32) {
         let _ = volts;
         self.can
-            .set_voltage(
+            .voltage_setpoint(
                 volts,
                 self.pid_slot,
                 self.feedforward,
@@ -176,7 +176,7 @@ impl SparkMAX {
     ) -> anyhow::Result<MotorGuard<Self>> {
         let can_client = CANClient::new(port);
         // i should replace this with GET_MOTOR_INTERFACE or something later
-        can_client.set_percent(0.0, pid_slot, 0.0, FeedforwardUnits::DutyCycle)?;
+        can_client.duty_cycle_setpoint(0.0, pid_slot, 0.0, FeedforwardUnits::DutyCycle)?;
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
             can: can_client,

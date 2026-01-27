@@ -285,125 +285,109 @@ impl CANClient {
         Ok(())
     }
 
-    pub fn set_percent(
+    pub fn duty_cycle_setpoint(
         &self,
         percent: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let percent = percent.clamp(-1.0, 1.0);
-
-        let frame = SparkCANFrame::DutyCycleSetpoint(SparkCANSetpoint {
-            setpoint: percent,
+        self.send_frame(SparkCANFrame::DutyCycleSetpoint(SparkCANSetpoint {
+            setpoint: percent.clamp(-1.0, 1.0),
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_voltage(
+    pub fn voltage_setpoint(
         &self,
         voltage: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::VoltageSetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::VoltageSetpoint(SparkCANSetpoint {
             setpoint: voltage,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_velocity(
+    pub fn velocity_setpoint(
         &self,
         velocity: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::VelocitySetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::VelocitySetpoint(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_position(
+    pub fn position_setpoint(
         &self,
         position: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::PositionSetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::PositionSetpoint(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_max_motion_velocity(
+    pub fn max_motion_velocity_setpoin(
         &self,
         velocity: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionVelocitySetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::MAXMotionVelocitySetpoint(SparkCANSetpoint {
             setpoint: velocity,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_max_motion_position(
+    pub fn max_motion_position_setpoint(
         &self,
         position: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::MAXMotionPositionSetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::MAXMotionPositionSetpoint(SparkCANSetpoint {
             setpoint: position,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
-    pub fn set_current(
+    pub fn current_setpoint(
         &self,
         current: f32,
         pid_slot: u8,
         feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
-        let frame = SparkCANFrame::CurrentSetpoint(SparkCANSetpoint {
+        self.send_frame(SparkCANFrame::CurrentSetpoint(SparkCANSetpoint {
             setpoint: current,
             arb_feedforward: feedforward,
             pid_slot,
             ff_units: feedforward_units,
-        });
-
-        self.send_frame(frame)
+        }))
     }
 
     pub fn set_i_accumulation(&self, i_accumulation: f32) -> HALResult<()> {
