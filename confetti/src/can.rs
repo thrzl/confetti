@@ -296,7 +296,7 @@ impl CANClient {
         let frame = SparkCANFrame::DutyCycle {
             setpoint: percent,
             arb_feedforward: feedforward,
-            pid_slot: pid_slot,
+            pid_slot,
             ff_units: feedforward_units,
         };
 
@@ -313,7 +313,7 @@ impl CANClient {
         let frame = SparkCANFrame::Voltage {
             setpoint: voltage,
             arb_feedforward: feedforward,
-            pid_slot: pid_slot,
+            pid_slot,
             ff_units: feedforward_units,
         };
 
@@ -330,7 +330,7 @@ impl CANClient {
         let frame = SparkCANFrame::Velocity {
             setpoint: velocity,
             arb_feedforward: feedforward,
-            pid_slot: pid_slot,
+            pid_slot,
             ff_units: feedforward_units,
         };
 
