@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 
-use crate::can::{CANClient, SparkCANFrame};
+use crate::can::{CANClient, FeedforwardUnits, SparkCANFrame, Status0};
 
 pub trait Motor: Send {
     /// check if the watchdog timeout has been exceeded. if it has,
@@ -89,6 +89,13 @@ impl MotorWatchdog {
                 false
             }
         });
+
+        // TODO: need to handle errors here better
+        // we're sending this last though because
+        // if it's delayed that means that we lack
+        // proper control over the motors. they should
+        // break in this situation
+        let _ = CANClient::send_heartbeat();
     }
 
     /// add a new motor from a weak reference. automatically run when a motor is initialized.
@@ -105,7 +112,10 @@ const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(100);
 pub struct SparkMAX {
     watchdog_time: Instant,
     can: CANClient,
-    status0: Option<SparkCANFrame>,
+    status0: Option<Status0>,
+    pid_slot: u8,
+    feedforward: f32,
+    feedforward_units: FeedforwardUnits,
 }
 
 impl Motor for SparkMAX {
@@ -118,14 +128,24 @@ impl Motor for SparkMAX {
     fn set_percent(&mut self, percentage: f32) {
         let _ = percentage;
         self.can
-            .set_percent(percentage.clamp(-1.0, 1.0))
+            .duty_cycle_setpoint(
+                percentage.clamp(-1.0, 1.0),
+                self.pid_slot,
+                self.feedforward,
+                self.feedforward_units,
+            )
             .expect("failed to set motor percent")
     }
 
     fn set_voltage(&mut self, volts: f32) {
         let _ = volts;
         self.can
-            .set_voltage(volts)
+            .voltage_setpoint(
+                volts,
+                self.pid_slot,
+                self.feedforward,
+                self.feedforward_units,
+            )
             .expect("failed to set motor voltage")
     }
 
@@ -139,25 +159,31 @@ impl Motor for SparkMAX {
         //
         for message in _messages {
             match message {
-                SparkCANFrame::Status0 { .. } => self.status0 = Some(message),
+                SparkCANFrame::Status0(status) => self.status0 = Some(status),
                 _ => todo!(),
             }
         }
-
-        // TODO: need to handle errors here better
-        let _ = self.can.send_heartbeat();
     }
 }
 
 impl SparkMAX {
     /// initialize a new REV SPARK MAX motor controller. will attempt to send a heartbeat and error if it fails.
-    pub fn new(port: u32) -> anyhow::Result<MotorGuard<Self>> {
+    pub fn new(
+        port: u32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> anyhow::Result<MotorGuard<Self>> {
         let can_client = CANClient::new(port);
-        can_client.send_heartbeat()?;
+        // i should replace this with GET_MOTOR_INTERFACE or something later
+        can_client.duty_cycle_setpoint(0.0, pid_slot, 0.0, FeedforwardUnits::DutyCycle)?;
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
             can: can_client,
             status0: None,
+            pid_slot,
+            feedforward,
+            feedforward_units,
         }));
         let trait_motor: Arc<Mutex<dyn Motor + Send>> = motor.clone();
         MOTOR_REGISTRY
@@ -167,59 +193,26 @@ impl SparkMAX {
     }
 
     pub fn get_applied_output(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { applied_output, .. } => Some(applied_output),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.applied_output)
     }
 
     pub fn get_voltage(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { voltage, .. } => Some(voltage),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.voltage)
     }
 
     pub fn get_current(&self) -> Option<f32> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { current, .. } => Some(current),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.current)
     }
 
-    pub fn get_temperature(&self) -> Option<u8> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 {
-                motor_temperature, ..
-            } => Some(motor_temperature),
-            _ => unreachable!(),
-        }
+    pub fn get_motor_temperature(&self) -> Option<u8> {
+        self.status0.map(|status| status.motor_temperature)
     }
 
     pub fn get_inverted(&self) -> Option<bool> {
-        let status = match self.status0 {
-            Some(status) => status,
-            None => return None,
-        };
-        match status {
-            SparkCANFrame::Status0 { is_inverted, .. } => Some(is_inverted),
-            _ => unreachable!(),
-        }
+        self.status0.map(|status| status.is_inverted)
+    }
+
+    pub fn set_pid_slot(&mut self, pid_slot: u8) {
+        self.pid_slot = pid_slot
     }
 }
