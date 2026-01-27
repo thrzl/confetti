@@ -455,12 +455,12 @@ impl CANClient {
         for message in messages {
             let message_id = message.messageID;
 
-            let base_id = message_id & !0x3F;
-            let _device_id = message_id & 0x3F; // just in case i need it later
+            let message_id_bits = message_id.view_bits::<Lsb0>();
+            let (frame_id, _device_id) = message_id_bits.split_at(23); // frame_id (23 bits) | device_id (6-bits)
 
             let data = message.data;
             let bits = data.view_bits::<Lsb0>();
-            let frame = match base_id {
+            let frame = match frame_id.load_le() {
                 0x205B_800 => SparkCANFrame::Status0(Status0 {
                     applied_output: (sign_extend(bits[0..16].load_le::<i32>(), 16) as f32)
                         * 0.00003082369457075716,
