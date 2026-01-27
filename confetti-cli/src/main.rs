@@ -1,9 +1,11 @@
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use log::error;
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
 mod deploy;
+use crate::deploy::{build, deploy};
 
 pub fn with_spinner<R>(
     message: String,
@@ -31,15 +33,48 @@ struct ConfettiCli {
 enum Commands {
     /// deploy your code to the robot
     Deploy {
+        /// the team number to deploy to
         #[arg(short, long)]
         team: u32,
+
+        /// whether or not to run a debug build
+        #[arg(long)]
+        debug: bool,
+    },
+
+    /// build your robot code
+    Build {
+        /// whether or not to run a debug build
+        #[arg(long)]
+        debug: bool,
     },
 }
 
 fn run(cli: ConfettiCli) -> Result<()> {
     match &cli.command {
-        Some(Commands::Deploy { team }) => {
-            deploy::deploy(*team).map_err(|_| anyhow!("deployment failed"))
+        Some(Commands::Deploy { team, debug }) => {
+            deploy(*team, debug).map_err(|_| anyhow!("deployment failed"))
+        }
+        Some(Commands::Build { debug }) => {
+            let _ = with_spinner(
+                "building robot code (this may take a minute)".to_string(),
+                || build(debug),
+                |binary, spinner| {
+                    spinner.success(&format!(
+                        "built robot code at {}",
+                        binary
+                            .to_str()
+                            .unwrap()
+                            .trim_start_matches('"')
+                            .trim_end_matches('"')
+                    ));
+                },
+                |error, spinner| {
+                    spinner.clear();
+                    error!("failed to build robot code: {error}")
+                },
+            )?;
+            Ok(())
         }
         None => Ok(()),
     }

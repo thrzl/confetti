@@ -12,6 +12,18 @@ if you're familiar with how some of the low-level stuff works, please reach out!
 
 even if you just have complaints about the API, i'd love to hear em. i'm far from a rust professional
 
+## prerequisites
+
+1. you need to have [WPILib](https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-2/wpilib-setup.html) installed. choose "everything" (NOT "tools only").
+2. download the proper ARM FRC toolchain for your platform from [wpilibsuite/opensdk](https://github.com/wpilibsuite/opensdk/releases). you're looking for something like "`cortexa9_vfpv3-roborio-academic-2025-YOUR-SYSTEM-TRIPLE-Toolchain-12.1.0.tgz`". as of right now, the v2025-2 toolchain is the latest and does compile.
+3. set the `arm-frc202X-linux-gnueabi-gcc` as the linker for the `arm-unknown-linux-gnueabi` target in `~/.cargo/config.toml` file. for example, on my computer:
+```toml
+[target.arm-unknown-linux-gnueabi]
+linker = "/Users/te/roborio-toolchain/bin/arm-frc2025-linux-gnueabi-gcc"
+```
+4. now, when you build, ensure that you use `--target arm-unknown-linux-gnueabi`, e.g. `cargo build --release --target arm-unknown-linux-gnueabi`
+
+
 ## example
 ```rust
 use confetti::prelude::*;
