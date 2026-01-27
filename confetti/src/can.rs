@@ -329,7 +329,7 @@ impl CANClient {
         }))
     }
 
-    pub fn max_motion_velocity_setpoin(
+    pub fn max_motion_velocity_setpoint(
         &self,
         velocity: f32,
         pid_slot: u8,
