@@ -181,7 +181,7 @@ impl SparkCANFrame {
             Self::Heartbeat => 0xB2,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
-        frame_arb_id | (device_id << 6)
+        frame_arb_id | (device_id)
     }
     pub fn to_can_bytes(&self) -> [u8; 8] {
         let (sp, ff, slot, units) = match *self {
@@ -306,7 +306,7 @@ impl CANClient {
     }
 
     pub fn create_arb_id_from_info(device_id: u32, frame: SparkCANFrame) -> u32 {
-        frame.arb_id(device_id) | device_id << 6 // this needs to be double checked
+        frame.arb_id(device_id) | device_id // this needs to be double checked
     }
 
     pub fn read_frames(&self) -> HALResult<Vec<SparkCANFrame>> {
