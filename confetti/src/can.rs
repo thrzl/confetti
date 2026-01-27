@@ -1,13 +1,11 @@
+//! lower-level CAN bindings.
+//!
+//! this subcrate contains direct calls to the HAL's CAN interface.
+//! it contains types for various CAN messages and statuses, as well as a
+//! `CANClient` for interfacing with the CAN.
 use bitvec::{field::BitField, order::Lsb0, view::BitView};
 use wpihal::can::CANStreamMessage;
 pub use wpihal::{can as hal_can, can_api, error::HALResult};
-
-#[repr(u32)]
-pub enum ApiClass {
-    Setpoint = 0,
-    Control = 1,
-    Status = 46,
-}
 
 #[derive(Clone, Copy)]
 pub struct SparkCANSetpoint {
