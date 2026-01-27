@@ -33,8 +33,6 @@ pub struct SparkCANSetpoint {
 pub enum SparkCANFrame {
     Null,
 
-    Heartbeat,
-
     DutyCycle(SparkCANSetpoint),
     Velocity(SparkCANSetpoint),
     Position(SparkCANSetpoint),
@@ -148,7 +146,6 @@ impl SparkCANFrame {
             Self::Position { .. } => 0x2050_100,
             Self::Voltage { .. } => 0x2050_140,
             Self::Current { .. } => 0x2050_180,
-            Self::Heartbeat => 0xB2,
             Self::ClearFaults => 0x2051_B80,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
@@ -185,13 +182,9 @@ impl SparkCANFrame {
                 bits.set(50, ff_units as u8 == 1);
                 buf
             }
-            Self::ClearFaults | Self::Heartbeat => [0u8; 8],
+            Self::ClearFaults => [0u8; 8],
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
         }
-    }
-
-    pub fn heartbeat(device_id: u32) -> u32 {
-        Self::Heartbeat.arb_id(device_id)
     }
 }
 
@@ -230,10 +223,8 @@ impl CANClient {
         Ok(())
     }
 
-    pub fn send_heartbeat(&self) -> HALResult<()> {
-        let arbitration_id = SparkCANFrame::heartbeat(self.device_id);
-
-        hal_can::send_message(arbitration_id, &[0u8; 8], 2000)?;
+    pub fn send_heartbeat() -> HALResult<()> {
+        hal_can::send_message(0x2052_C80, &[1u8; 8], 2000)?;
         Ok(())
     }
 

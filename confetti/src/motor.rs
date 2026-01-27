@@ -89,6 +89,13 @@ impl MotorWatchdog {
                 false
             }
         });
+
+        // TODO: need to handle errors here better
+        // we're sending this last though because
+        // if it's delayed that means that we lack
+        // proper control over the motors. they should
+        // break in this situation
+        let _ = CANClient::send_heartbeat();
     }
 
     /// add a new motor from a weak reference. automatically run when a motor is initialized.
@@ -156,9 +163,6 @@ impl Motor for SparkMAX {
                 _ => todo!(),
             }
         }
-
-        // TODO: need to handle errors here better
-        let _ = self.can.send_heartbeat();
     }
 }
 
@@ -171,7 +175,8 @@ impl SparkMAX {
         feedforward_units: FeedforwardUnits,
     ) -> anyhow::Result<MotorGuard<Self>> {
         let can_client = CANClient::new(port);
-        can_client.send_heartbeat()?;
+        // i should replace this with GET_MOTOR_INTERFACE or something later
+        can_client.set_percent(0.0, pid_slot, 0.0, FeedforwardUnits::DutyCycle)?;
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
             can: can_client,
