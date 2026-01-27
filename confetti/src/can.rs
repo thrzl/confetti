@@ -44,6 +44,30 @@ pub enum SparkCANFrame {
 
     ClearFaults,
 
+    SetIAccumulation {
+        i_accumulation: f32,
+    },
+
+    SetAnalogPosition {
+        position: f32,
+    },
+
+    SetPrimaryEncoderPosition {
+        position: f32,
+    },
+
+    SetExtOrAltEncoderPosition {
+        position: f32,
+    },
+
+    SetDutyCyclePosition {
+        position: f32,
+    },
+
+    StartFollowerMode,
+
+    PersistParameters, // need to include the 16-bit MAGIC_NUMBER 15011
+
     // statuses
     Status0 {
         applied_output: f32,
@@ -182,7 +206,27 @@ impl SparkCANFrame {
                 bits.set(50, ff_units as u8 == 1);
                 buf
             }
-            Self::ClearFaults => [0u8; 8],
+            Self::ClearFaults | Self::StartFollowerMode => [0u8; 8],
+            Self::SetIAccumulation { i_accumulation } => {
+                let mut buf = [0u8; 8];
+                buf[0..4].copy_from_slice(&i_accumulation.to_le_bytes());
+                buf[4..8].copy_from_slice(&3u8.to_le_bytes());
+                buf
+            }
+            Self::SetAnalogPosition { position }
+            | Self::SetDutyCyclePosition { position }
+            | Self::SetPrimaryEncoderPosition { position }
+            | Self::SetExtOrAltEncoderPosition { position } => {
+                let mut buf = [0u8; 8];
+                buf[0..4].copy_from_slice(&position.to_le_bytes());
+                buf[4..6].copy_from_slice(&3u8.to_le_bytes()); // magic number DATA_TYPE
+                buf
+            }
+            Self::PersistParameters => {
+                let mut buf = [0u8; 8];
+                buf[0..2].copy_from_slice(&15011u16.to_le_bytes());
+                buf
+            }
             _ => unimplemented!("we will never need to convert statuses to CAN bytes"),
         }
     }
