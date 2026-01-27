@@ -211,7 +211,7 @@ impl SparkCANFrame {
                 bits[48..50].store_le(pid_slot);
 
                 // arbitrary feedforward units
-                bits.set(50, ff_units as u8 == 1);
+                bits.set(50, matches!(ff_units, FeedforwardUnits::DutyCycle));
             }
             Self::ClearFaults | Self::StartFollowerMode | Self::StopFollowerMode => (),
             Self::SetIAccumulation { i_accumulation } => {
