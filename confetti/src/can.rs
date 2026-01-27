@@ -287,8 +287,8 @@ impl CANClient {
     pub fn set_percent(
         &self,
         percent: f32,
-        feedforward: f32,
         pid_slot: u8,
+        feedforward: f32,
         feedforward_units: FeedforwardUnits,
     ) -> HALResult<()> {
         let percent = percent.clamp(-1.0, 1.0);
@@ -303,23 +303,35 @@ impl CANClient {
         self.send_frame(frame)
     }
 
-    pub fn set_voltage(&self, voltage: f32) -> HALResult<()> {
+    pub fn set_voltage(
+        &self,
+        voltage: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
         let frame = SparkCANFrame::Voltage {
             setpoint: voltage,
-            arb_feedforward: 0.0,
-            pid_slot: 0,
-            ff_units: FeedforwardUnits::Voltage,
+            arb_feedforward: feedforward,
+            pid_slot: pid_slot,
+            ff_units: feedforward_units,
         };
 
         self.send_frame(frame)
     }
 
-    pub fn set_velocity(&self, velocity: f32) -> HALResult<()> {
+    pub fn set_velocity(
+        &self,
+        velocity: f32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> HALResult<()> {
         let frame = SparkCANFrame::Velocity {
             setpoint: velocity,
-            arb_feedforward: 0.0,
-            pid_slot: 0,
-            ff_units: FeedforwardUnits::Voltage,
+            arb_feedforward: feedforward,
+            pid_slot: pid_slot,
+            ff_units: feedforward_units,
         };
 
         self.send_frame(frame)

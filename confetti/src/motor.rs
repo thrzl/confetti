@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::{Arc, LazyLock, Weak};
 use std::time::{Duration, Instant};
 
-use crate::can::{CANClient, SparkCANFrame};
+use crate::can::{CANClient, FeedforwardUnits, SparkCANFrame};
 
 pub trait Motor: Send {
     /// check if the watchdog timeout has been exceeded. if it has,
@@ -106,6 +106,9 @@ pub struct SparkMAX {
     watchdog_time: Instant,
     can: CANClient,
     status0: Option<SparkCANFrame>,
+    pid_slot: u8,
+    feedforward: f32,
+    feedforward_units: FeedforwardUnits,
 }
 
 impl Motor for SparkMAX {
@@ -118,14 +121,24 @@ impl Motor for SparkMAX {
     fn set_percent(&mut self, percentage: f32) {
         let _ = percentage;
         self.can
-            .set_percent(percentage.clamp(-1.0, 1.0))
+            .set_percent(
+                percentage.clamp(-1.0, 1.0),
+                self.pid_slot,
+                self.feedforward,
+                self.feedforward_units,
+            )
             .expect("failed to set motor percent")
     }
 
     fn set_voltage(&mut self, volts: f32) {
         let _ = volts;
         self.can
-            .set_voltage(volts)
+            .set_voltage(
+                volts,
+                self.pid_slot,
+                self.feedforward,
+                self.feedforward_units,
+            )
             .expect("failed to set motor voltage")
     }
 
@@ -151,13 +164,21 @@ impl Motor for SparkMAX {
 
 impl SparkMAX {
     /// initialize a new REV SPARK MAX motor controller. will attempt to send a heartbeat and error if it fails.
-    pub fn new(port: u32) -> anyhow::Result<MotorGuard<Self>> {
+    pub fn new(
+        port: u32,
+        pid_slot: u8,
+        feedforward: f32,
+        feedforward_units: FeedforwardUnits,
+    ) -> anyhow::Result<MotorGuard<Self>> {
         let can_client = CANClient::new(port);
         can_client.send_heartbeat()?;
         let motor = MotorGuard::new(Mutex::new(Self {
             watchdog_time: Instant::now(),
             can: can_client,
             status0: None,
+            pid_slot,
+            feedforward,
+            feedforward_units,
         }));
         let trait_motor: Arc<Mutex<dyn Motor + Send>> = motor.clone();
         MOTOR_REGISTRY
@@ -221,5 +242,9 @@ impl SparkMAX {
             SparkCANFrame::Status0 { is_inverted, .. } => Some(is_inverted),
             _ => unreachable!(),
         }
+    }
+
+    pub fn set_pid_slot(&mut self, pid_slot: u8) {
+        self.pid_slot = pid_slot
     }
 }
