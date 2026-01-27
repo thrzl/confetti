@@ -33,14 +33,18 @@ struct ConfettiCli {
 enum Commands {
     /// deploy your code to the robot
     Deploy {
+        /// the team number to deploy to
         #[arg(short, long)]
         team: u32,
 
+        /// whether or not to run a debug build
         #[arg(long)]
         debug: bool,
     },
 
+    /// build your robot code
     Build {
+        /// whether or not to run a debug build
         #[arg(long)]
         debug: bool,
     },
