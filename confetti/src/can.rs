@@ -126,8 +126,6 @@ pub struct Status9 {
 // see https://github.com/grayson-arendt/sparkcan/blob/25167e908c9350a0047edc041e0a6420b6b77a76/include/SparkBase.hpp#L54C1-L78C3
 #[derive(Clone, Copy)]
 pub enum SparkCANFrame {
-    Null,
-
     DutyCycleSetpoint(SparkCANSetpoint),
     VelocitySetpoint(SparkCANSetpoint),
     PositionSetpoint(SparkCANSetpoint),
@@ -184,8 +182,17 @@ impl SparkCANFrame {
             Self::PositionSetpoint { .. } => 0x2050_100,
             Self::VoltageSetpoint { .. } => 0x2050_140,
             Self::CurrentSetpoint { .. } => 0x2050_180,
-            Self::StopFollowerMode => 0x2057_C80,
+            Self::MAXMotionPositionSetpoint { .. } => 0x2050_200,
+            Self::MAXMotionVelocitySetpoint { .. } => 0x2050_240,
             Self::ClearFaults => 0x2051_B80,
+            Self::SetPrimaryEncoderPosition { .. } => 0x2052_800,
+            Self::SetIAccumulation { .. } => 0x2052_880,
+            Self::SetAnalogPosition { .. } => 0x2052_8C0,
+            Self::SetExtOrAltEncoderPosition { .. } => 0x2052_900,
+            Self::SetDutyCyclePosition { .. } => 0x2052_940,
+            Self::StopFollowerMode => 0x2057_C80,
+            Self::StartFollowerMode => 0x2057_C00,
+            Self::PersistParameters => 0x205F_FC0,
             _ => unimplemented!("we will never need to get the arb ID of a status"),
         };
         frame_arb_id | (device_id)
