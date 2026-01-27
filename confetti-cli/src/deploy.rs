@@ -51,19 +51,24 @@ fn find_roborio(team_number: u32) -> Result<String> {
     address.ok_or(DeployError::RoboRIONotFound.into())
 }
 
-pub fn build() -> Result<PathBuf> {
+pub fn build(debug: &bool) -> Result<PathBuf> {
     let mut manifest = fs::File::open(std::env::current_dir()?.join("Cargo.toml").as_path())?;
     let mut manifest_content = String::new();
     manifest.read_to_string(&mut manifest_content)?;
     let metadata: Value = toml::from_str(&manifest_content)?;
-    let name = metadata["package"]["name"].to_string();
+    let name = match metadata.get("bin") {
+        Some(bins) => bins.as_array().unwrap()[0]["name"].as_str(),
+        None => metadata["package"]["name"].as_str(),
+    }
+    .unwrap();
+    // let name = metadata["package"]["name"].to_string();
 
+    let mut args = vec!["build", "--quiet", "--target", TARGET_TRIPLE];
+    if !debug {
+        args.push("--release");
+    }
     let err = Command::new("cargo")
-        .arg("build")
-        .arg("--release")
-        .arg("--quiet")
-        .arg("--target")
-        .arg(TARGET_TRIPLE)
+        .args(args)
         .stdout(std::process::Stdio::null())
         // .stderr(std::process::Stdio::null())
         .status()?;
@@ -77,10 +82,10 @@ pub fn build() -> Result<PathBuf> {
     Ok(binary_path)
 }
 
-pub fn deploy(team_number: u32) -> Result<()> {
+pub fn deploy(team_number: u32, debug: &bool) -> Result<()> {
     let binary_path = with_spinner(
         "building robot code (this may take a minute)".to_string(),
-        build,
+        || build(debug),
         |binary, spinner| {
             spinner.success(&format!("built robot code at {}", binary.to_str().unwrap()));
         },
