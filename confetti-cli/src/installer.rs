@@ -239,9 +239,13 @@ pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
         File::open(&cargo_config_path)?.read_to_string(&mut existing_config)?;
         let mut config: toml::Value = toml::from_str(&existing_config)?;
         if !global {
-            config["build"] = toml::Value::Table(toml::value::Table::new());
-            config["build"]["target"] =
-                toml::Value::String("arm-unknown-linux-gnueabi".to_string());
+            let table = config.as_table_mut().unwrap();
+            table.insert(
+                "build".to_string(),
+                toml::Value::Table(toml::toml! {
+                    target = "arm-unknown-linux-gnueabi"
+                }),
+            );
         }
 
         if let Some(target) = config.get_mut("target.arm-unknown-linux-gnueabi") {
@@ -249,12 +253,19 @@ pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
             let updated_config = toml::to_string(&config)?;
             write!(cargo_config_file, "{}", updated_config)?;
         } else {
-            let new_target = format!(
-                "\n[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"\n",
+            let target_table: toml::Value = toml::from_str(&format!(
+                r#"
+                [target.arm-unknown-linux-gnueabi]
+                linker = "{}"
+                "#,
                 gcc_path.to_str().unwrap()
+            ))?;
+            let full_toml_string = format!(
+                "{}\n{}",
+                toml::to_string_pretty(&config)?,
+                toml::to_string_pretty(&target_table)?
             );
-            write!(cargo_config_file, "{}", existing_config)?;
-            write!(cargo_config_file, "{}", new_target)?;
+            write!(cargo_config_file, "{}", full_toml_string)?;
         }
         info!(
             "updated existing cargo config at {}",
