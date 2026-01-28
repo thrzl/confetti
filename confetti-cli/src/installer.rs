@@ -79,7 +79,7 @@ pub fn download_wpilib() -> Result<()> {
     Ok(())
 }
 
-pub fn install_toolchain() -> Result<()> {
+pub fn install_toolchain(global: bool) -> Result<()> {
     info!("detected system type {OS} {ARCH}");
     let (host_string, extension) = match (OS, ARCH) {
         ("linux", "aarch64") => ("aarch64-bookworm-linux-gnu", "tgz"),
@@ -164,7 +164,7 @@ pub fn install_toolchain() -> Result<()> {
         "setting up cargo to use roboRIO toolchain to {}",
         extracted_path.display()
     );
-    setup_cargo_toolchain(&extracted_path)?;
+    setup_cargo_toolchain(&extracted_path, global)?;
     info!("roboRIO toolchain installation complete");
     Ok(())
 }
@@ -212,7 +212,7 @@ fn extract_zip(path: &PathBuf) -> Result<PathBuf> {
     Ok(destination_dir)
 }
 
-pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
+pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
     let toolchain_bin = path.join("bin");
     // find file in bin that ends with gcc
     let gcc_path = std::fs::read_dir(&toolchain_bin)?
@@ -221,7 +221,11 @@ pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
         .find(|path| path.file_name().unwrap().to_str().unwrap().ends_with("gcc"))
         .ok_or(anyhow!("failed to find gcc in toolchain bin directory"))?;
 
-    let cargo_config_dir = dirs::home_dir().unwrap().join(".cargo");
+    let cargo_config_dir = if global {
+        dirs::home_dir().unwrap().join(".cargo")
+    } else {
+        std::env::current_dir()?.join(".cargo")
+    };
     std::fs::create_dir_all(&cargo_config_dir)?;
     let cargo_config_path = cargo_config_dir.join("config.toml");
     let mut cargo_config_file = OpenOptions::new()
@@ -234,6 +238,11 @@ pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
         let mut existing_config = String::new();
         File::open(&cargo_config_path)?.read_to_string(&mut existing_config)?;
         let mut config: toml::Value = toml::from_str(&existing_config)?;
+        if !global {
+            config["build"] = toml::Value::Table(toml::value::Table::new());
+            config["build"]["target"] =
+                toml::Value::String("arm-unknown-linux-gnueabi".to_string());
+        }
 
         if let Some(target) = config.get_mut("target.arm-unknown-linux-gnueabi") {
             target["linker"] = toml::Value::String(gcc_path.to_str().unwrap().to_string());
@@ -256,7 +265,7 @@ pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
 
     write!(
         cargo_config_file,
-        "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"",
+        "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"\n\n[build]\ntarget = \"arm-unknown-linux-gnueabi\"\n",
         gcc_path.to_str().unwrap()
     )?;
     Ok(())

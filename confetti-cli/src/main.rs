@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use log::error;
@@ -51,15 +51,28 @@ enum Commands {
     },
 
     /// download WPILib and roboRIO toolchain
-    Install,
+    Install {
+        /// set the toolchain in the global cargo config instead of the local project
+        #[arg(long)]
+        global: bool,
+    },
+}
+
+fn check_cargo_toml() -> Result<()> {
+    if !std::path::Path::new("Cargo.toml").exists() {
+        bail!("no Cargo.toml found in current directory");
+    }
+    Ok(())
 }
 
 fn run(cli: ConfettiCli) -> Result<()> {
     match &cli.command {
         Some(Commands::Deploy { team, debug }) => {
+            check_cargo_toml()?;
             deploy(*team, debug).map_err(|_| anyhow!("deployment failed"))
         }
         Some(Commands::Build { debug }) => {
+            check_cargo_toml()?;
             let _ = with_spinner(
                 "building robot code (this may take a minute)".to_string(),
                 || build(debug),
@@ -80,7 +93,8 @@ fn run(cli: ConfettiCli) -> Result<()> {
             )?;
             Ok(())
         }
-        Some(Commands::Install) => installer::install_toolchain(),
+        Some(Commands::Install { global }) => installer::install_toolchain(*global)
+            .map_err(|e| anyhow!("installation failed").context(e)),
         None => Ok(()),
     }
 }
