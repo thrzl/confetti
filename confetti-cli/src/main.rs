@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use log::error;
+use log::{error, info};
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
 mod deploy;
@@ -88,7 +88,10 @@ fn run(cli: ConfettiCli) -> Result<()> {
                 },
                 |error, spinner| {
                     spinner.clear();
-                    error!("failed to build robot code: {error}")
+                    error!("failed to build robot code: {error}");
+                    info!(
+                        "if you haven't already, make sure you've installed the roboRIO toolchain with `confetti install`"
+                    )
                 },
             )?;
             Ok(())
