@@ -179,7 +179,7 @@ pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
         .open(&cargo_config_path)?;
 
     if cargo_config_path.exists() {
-        let mut existing_config = String::new();
+        let mut existing_config = String::default();
         File::open(&cargo_config_path)?.read_to_string(&mut existing_config)?;
         let mut config: toml::Value = toml::from_str(&existing_config)?;
         if !global {
@@ -218,9 +218,9 @@ pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
         return Ok(());
     }
 
-    write!(
+    writeln!(
         cargo_config_file,
-        "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"\n\n[build]\ntarget = \"arm-unknown-linux-gnueabi\"\n",
+        "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"\n\n[build]\ntarget = \"arm-unknown-linux-gnueabi\"",
         gcc_path.to_str().unwrap()
     )?;
     Ok(())
