@@ -173,6 +173,7 @@ pub fn setup_cargo_toolchain(path: &PathBuf, global: bool) -> Result<()> {
     let cargo_config_path = cargo_config_dir.join("config.toml");
     let mut cargo_config_file = OpenOptions::new()
         .create(true)
+        .read(true)
         .write(true)
         .truncate(true)
         .open(&cargo_config_path)?;
