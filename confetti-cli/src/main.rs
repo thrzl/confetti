@@ -50,9 +50,9 @@ enum Commands {
         debug: bool,
     },
 
-    /// download WPILib and roboRIO toolchain
+    /// download and install roboRIO compilation toolchain
     Install {
-        /// set the toolchain in the global cargo config instead of the local project
+        /// setup toolchain in global cargo config instead of the local project
         #[arg(long)]
         global: bool,
     },
