@@ -234,17 +234,26 @@ pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
         let mut existing_config = String::new();
         File::open(&cargo_config_path)?.read_to_string(&mut existing_config)?;
         let mut config: toml::Value = toml::from_str(&existing_config)?;
+
         if let Some(target) = config.get_mut("target.arm-unknown-linux-gnueabi") {
             target["linker"] = toml::Value::String(gcc_path.to_str().unwrap().to_string());
             let updated_config = toml::to_string(&config)?;
             write!(cargo_config_file, "{}", updated_config)?;
-            info!(
-                "updated existing cargo config at {}",
-                cargo_config_path.to_str().unwrap()
+        } else {
+            let new_target = format!(
+                "\n[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"\n",
+                gcc_path.to_str().unwrap()
             );
-            return Ok(());
+            write!(cargo_config_file, "{}", existing_config)?;
+            write!(cargo_config_file, "{}", new_target)?;
         }
+        info!(
+            "updated existing cargo config at {}",
+            cargo_config_path.to_str().unwrap()
+        );
+        return Ok(());
     }
+
     write!(
         cargo_config_file,
         "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"",
