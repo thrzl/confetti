@@ -7,7 +7,7 @@ use reqwest::blocking::{Client, get};
 use reqwest::header::HeaderMap;
 use serde_json::Value;
 use std::env::consts::{ARCH, OS};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -110,7 +110,7 @@ pub fn install_toolchain() -> Result<()> {
 
     let release_data: Value = res.json()?;
     let latest_toolchain = release_data.as_array().unwrap().first().unwrap();
-    let version = latest_toolchain["tag_name"].to_string();
+    let version = latest_toolchain["tag_name"].as_str().unwrap();
     let asset = latest_toolchain["assets"]
         .as_array()
         .unwrap()
@@ -153,13 +153,15 @@ pub fn install_toolchain() -> Result<()> {
     info!("successfully downloaded toolchain archive");
     info!("extracting toolchain to ~/.confetti directory");
     #[cfg(target_os = "windows")]
-    {
-        let extracted_path = extract_zip(&file_path)?;
-    }
+    let extracted_path = extract_zip(&file_path)?.join("roborio-academic");
     #[cfg(not(target_os = "windows"))]
-    {
-        let extracted_path = extract_tgz(&file_path)?;
-    }
+    let extracted_path = extract_tgz(&file_path)?.join("roborio-academic");
+    info!(
+        "setting up cargo to use roboRIO toolchain to {}",
+        extracted_path.display()
+    );
+    setup_cargo_toolchain(&extracted_path)?;
+    info!("roboRIO toolchain installation complete");
     Ok(())
 }
 
@@ -171,9 +173,7 @@ fn extract_tgz(path: &PathBuf) -> Result<PathBuf> {
     let mut archive = tar::Archive::new(tar_file);
     let progress = ProgressBar::new_spinner()
         .with_message("extracting roboRIO toolchain")
-        .with_style(ProgressStyle::with_template(
-            "{spinner:.green} {msg} this shouldn't take long",
-        )?)
+        .with_style(ProgressStyle::with_template("{spinner:.green} {msg}")?)
         .with_finish(indicatif::ProgressFinish::Abandon);
     for entry in archive.entries()? {
         let mut entry = entry?;
@@ -205,4 +205,45 @@ fn extract_zip(path: &PathBuf) -> Result<PathBuf> {
     }
     progress.finish_with_message("roboRIO toolchain extracted");
     Ok(destination_dir)
+}
+
+pub fn setup_cargo_toolchain(path: &PathBuf) -> Result<()> {
+    let toolchain_bin = path.join("bin");
+    // find file in bin that ends with gcc
+    let gcc_path = std::fs::read_dir(&toolchain_bin)?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .find(|path| path.file_name().unwrap().to_str().unwrap().ends_with("gcc"))
+        .ok_or(anyhow!("failed to find gcc in toolchain bin directory"))?;
+
+    let cargo_config_dir = dirs::home_dir().unwrap().join(".cargo");
+    std::fs::create_dir_all(&cargo_config_dir)?;
+    let cargo_config_path = cargo_config_dir.join("config.toml");
+    let mut cargo_config_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&cargo_config_path)?;
+
+    if cargo_config_path.exists() {
+        let mut existing_config = String::new();
+        File::open(&cargo_config_path)?.read_to_string(&mut existing_config)?;
+        let mut config: toml::Value = toml::from_str(&existing_config)?;
+        if let Some(target) = config.get_mut("target.arm-unknown-linux-gnueabi") {
+            target["linker"] = toml::Value::String(gcc_path.to_str().unwrap().to_string());
+            let updated_config = toml::to_string(&config)?;
+            write!(cargo_config_file, "{}", updated_config)?;
+            info!(
+                "updated existing cargo config at {}",
+                cargo_config_path.to_str().unwrap()
+            );
+            return Ok(());
+        }
+    }
+    write!(
+        cargo_config_file,
+        "[target.arm-unknown-linux-gnueabi]\nlinker = \"{}\"",
+        gcc_path.to_str().unwrap()
+    )?;
+    Ok(())
 }
