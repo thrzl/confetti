@@ -5,7 +5,7 @@ use log::{error, info};
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
 mod deploy;
-mod installer;
+mod toolchain;
 use crate::deploy::{build, deploy};
 
 pub fn with_spinner<R>(
@@ -96,7 +96,7 @@ fn run(cli: ConfettiCli) -> Result<()> {
             )?;
             Ok(())
         }
-        Some(Commands::Install { global }) => installer::install_toolchain(*global)
+        Some(Commands::Install { global }) => toolchain::install_toolchain(*global)
             .map_err(|e| anyhow!("installation failed").context(e)),
         None => Ok(()),
     }
