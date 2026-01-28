@@ -5,7 +5,7 @@ use log::error;
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
 mod deploy;
-mod setup;
+mod installer;
 use crate::deploy::{build, deploy};
 
 pub fn with_spinner<R>(
@@ -51,7 +51,7 @@ enum Commands {
     },
 
     /// download WPILib and roboRIO toolchain
-    Setup,
+    Install,
 }
 
 fn run(cli: ConfettiCli) -> Result<()> {
@@ -80,7 +80,7 @@ fn run(cli: ConfettiCli) -> Result<()> {
             )?;
             Ok(())
         }
-        Some(Commands::Setup) => setup::download_wpilib(),
+        Some(Commands::Install) => installer::download_wpilib(),
         None => Ok(()),
     }
 }
