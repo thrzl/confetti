@@ -1,10 +1,11 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use log::error;
+use log::{error, info};
 use spinoff::{Color::Blue, Spinner, spinners::Dots};
 
 mod deploy;
+mod toolchain;
 use crate::deploy::{build, deploy};
 
 pub fn with_spinner<R>(
@@ -48,14 +49,30 @@ enum Commands {
         #[arg(long)]
         debug: bool,
     },
+
+    /// download and install roboRIO compilation toolchain
+    Install {
+        /// setup toolchain in global cargo config instead of the local project
+        #[arg(long)]
+        global: bool,
+    },
+}
+
+fn check_cargo_toml() -> Result<()> {
+    if !std::path::Path::new("Cargo.toml").exists() {
+        bail!("no Cargo.toml found in current directory");
+    }
+    Ok(())
 }
 
 fn run(cli: ConfettiCli) -> Result<()> {
     match &cli.command {
         Some(Commands::Deploy { team, debug }) => {
+            check_cargo_toml()?;
             deploy(*team, debug).map_err(|_| anyhow!("deployment failed"))
         }
         Some(Commands::Build { debug }) => {
+            check_cargo_toml()?;
             let _ = with_spinner(
                 "building robot code (this may take a minute)".to_string(),
                 || build(debug),
@@ -71,11 +88,16 @@ fn run(cli: ConfettiCli) -> Result<()> {
                 },
                 |error, spinner| {
                     spinner.clear();
-                    error!("failed to build robot code: {error}")
+                    error!("failed to build robot code: {error}");
+                    info!(
+                        "if you haven't already, make sure you've installed the roboRIO toolchain with `confetti install`"
+                    )
                 },
             )?;
             Ok(())
         }
+        Some(Commands::Install { global }) => toolchain::install_toolchain(*global)
+            .map_err(|e| anyhow!("installation failed").context(e)),
         None => Ok(()),
     }
 }
