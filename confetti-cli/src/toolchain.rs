@@ -138,8 +138,16 @@ fn extract_zip(path: &PathBuf) -> Result<PathBuf> {
     for i in 0..zip.len() {
         let mut file = zip.by_index(i)?;
 
-        let mut output = File::create(destination_dir.join(file.mangled_name()))?;
-        std::io::copy(&mut file, &mut output)?;
+        let output_path = destination_dir.join(file.mangled_name());
+        if file.is_dir() {
+            std::fs::create_dir_all(&output_path)?;
+        } else {
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut output = File::create(&output_path)?;
+            std::io::copy(&mut file, &mut output)?;
+        }
 
         progress.inc(1);
     }
