@@ -80,7 +80,7 @@ fn run(cli: ConfettiCli) -> Result<()> {
             )?;
             Ok(())
         }
-        Some(Commands::Install) => installer::download_wpilib(),
+        Some(Commands::Install) => installer::install_toolchain(),
         None => Ok(()),
     }
 }
