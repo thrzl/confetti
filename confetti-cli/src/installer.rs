@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::env::consts::{ARCH, OS};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tempfile::{tempdir, tempdir_in};
 
@@ -138,7 +139,7 @@ pub fn install_toolchain() -> Result<()> {
         "{spinner:.green} {msg} ({total_bytes}) [{wide_bar:.cyan/blue}] {percent}% downloaded ({eta} left)",
     )?);
 
-    let mut buf = vec![0u8; 1024 * 64]; // 8 KB buffer
+    let mut buf = vec![0u8; 1024 * 128]; // 128 KB buffer
     loop {
         let bytes_read = res.read(&mut buf)?;
         if bytes_read == 0 {
@@ -149,9 +150,59 @@ pub fn install_toolchain() -> Result<()> {
         progress.inc(bytes_read as u64);
     }
 
-    info!(
-        "successfully downloaded toolchain archive to {}",
-        &file_path.to_str().unwrap()
-    );
+    info!("successfully downloaded toolchain archive");
+    info!("extracting toolchain to ~/.confetti directory");
+    #[cfg(target_os = "windows")]
+    {
+        let extracted_path = extract_zip(&file_path)?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let extracted_path = extract_tgz(&file_path)?;
+    }
     Ok(())
+}
+
+fn extract_tgz(path: &PathBuf) -> Result<PathBuf> {
+    let tar_file = flate2::read::GzDecoder::new(File::open(path)?);
+
+    let destination_dir = dirs::home_dir().unwrap().join(".confetti");
+    std::fs::create_dir_all(&destination_dir)?;
+    let mut archive = tar::Archive::new(tar_file);
+    let progress = ProgressBar::new_spinner()
+        .with_message("extracting roboRIO toolchain")
+        .with_style(ProgressStyle::with_template(
+            "{spinner:.green} {msg} this shouldn't take long",
+        )?)
+        .with_finish(indicatif::ProgressFinish::Abandon);
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let output_path = destination_dir.join(entry.path()?);
+        entry.unpack(&output_path)?;
+        progress.tick();
+    }
+    progress.finish_using_style();
+    Ok(destination_dir)
+}
+
+fn extract_zip(path: &PathBuf) -> Result<PathBuf> {
+    let zip_file = File::open(path)?;
+    let mut zip = zip::read::ZipArchive::new(zip_file)?;
+    let destination_dir = dirs::home_dir().unwrap().join(".confetti");
+    std::fs::create_dir_all(&destination_dir)?;
+
+    let progress = ProgressBar::new(zip.len() as u64)
+        .with_message("extracting roboRIO toolchain")
+        .with_style(ProgressStyle::with_template("{spinner:.green} {msg} ({total_bytes}) [{wide_bar:.cyan/blue}] {percent}% extracted ({eta} left)")?)
+        .with_finish(indicatif::ProgressFinish::Abandon);
+    for i in 0..zip.len() {
+        let mut file = zip.by_index(i)?;
+
+        let mut output = File::create(destination_dir.join(file.mangled_name()))?;
+        std::io::copy(&mut file, &mut output)?;
+
+        progress.inc(1);
+    }
+    progress.finish_with_message("roboRIO toolchain extracted");
+    Ok(destination_dir)
 }

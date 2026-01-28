@@ -15,6 +15,7 @@ clap = { version = "4.5.54", features = ["derive"] }
 colored = "3.1.1"
 dirs = "6.0.0"
 fern = "0.7.1"
+flate2 = "1.1.8"
 indicatif = "0.18.3"
 log = "0.4.29"
 regex = "1.12.2"
@@ -23,6 +24,8 @@ serde = "1.0.228"
 serde_json = "1.0.149"
 spinoff = "0.8.0"
 ssh-rs = { version = "0.5.0", features = ["scp"] }
+tar = "0.4.44"
 tempfile = "3.24.0"
 thiserror = "2.0.18"
 toml = "0.9.11"
+zip = {version = "7.2.0", default-features=false, features = ["deflate"]}
