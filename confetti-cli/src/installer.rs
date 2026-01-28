@@ -11,6 +11,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 use tempfile::{tempdir, tempdir_in};
 
 /// get the installed version of the WPIHAL crate.
@@ -138,6 +139,7 @@ pub fn install_toolchain() -> Result<()> {
     let progress = ProgressBar::new(bytesize).with_message("downloading roboRIO toolchain").with_style(ProgressStyle::with_template(
         "{spinner:.green} {msg} ({total_bytes}) [{wide_bar:.cyan/blue}] {percent}% downloaded ({eta} left)",
     )?);
+    progress.enable_steady_tick(Duration::from_millis(100));
 
     let mut buf = vec![0u8; 1024 * 128]; // 128 KB buffer
     loop {
@@ -149,6 +151,8 @@ pub fn install_toolchain() -> Result<()> {
 
         progress.inc(bytes_read as u64);
     }
+
+    progress.finish_with_message("roboRIO toolchain downloaded");
 
     info!("successfully downloaded toolchain archive");
     info!("extracting toolchain to ~/.confetti directory");
@@ -175,11 +179,11 @@ fn extract_tgz(path: &PathBuf) -> Result<PathBuf> {
         .with_message("extracting roboRIO toolchain")
         .with_style(ProgressStyle::with_template("{spinner:.green} {msg}")?)
         .with_finish(indicatif::ProgressFinish::Abandon);
+    progress.enable_steady_tick(Duration::from_millis(100));
     for entry in archive.entries()? {
         let mut entry = entry?;
         let output_path = destination_dir.join(entry.path()?);
         entry.unpack(&output_path)?;
-        progress.tick();
     }
     progress.finish_using_style();
     Ok(destination_dir)
@@ -195,6 +199,7 @@ fn extract_zip(path: &PathBuf) -> Result<PathBuf> {
         .with_message("extracting roboRIO toolchain")
         .with_style(ProgressStyle::with_template("{spinner:.green} {msg} ({total_bytes}) [{wide_bar:.cyan/blue}] {percent}% extracted ({eta} left)")?)
         .with_finish(indicatif::ProgressFinish::Abandon);
+    progress.enable_steady_tick(Duration::from_millis(100));
     for i in 0..zip.len() {
         let mut file = zip.by_index(i)?;
 
