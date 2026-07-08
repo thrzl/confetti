@@ -2,6 +2,12 @@
 
 a framework for building FRC robots in Rust
 
+## note:
+**this project is not dead yet!** it's just that:
+1. the current FRC season ended
+2. i graduated (yay!) so i'm not spending as much time at my high school
+3. they're currently moving to the [limelight systemcore](https://downloads.limelightvision.io/documents/systemcore_specifications_june15_2025_alpha.pdf), a raspberry-pi based computer which would be a lot simpler to develop for
+
 built on [guineawheek/wpihal-rs](https://github.com/guineawheek/wpihal-rs).
 
 ## contributing
